@@ -1,0 +1,13 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+<file alias="MainWindowIcon.png">images/MainWindowIcon.png</file>
+<file alias="OpenNewDatabase.ico">images/NewDatabase.ico</file>
+<file alias="Save.png">images/filesave.png</file>
+<file alias="New.png">images/filenew.png</file>
+<file alias="Quit.png">images/filequit.png</file>
+<file alias="Print.png">images/fileprint.png</file>
+<file alias="OnlineAnalysis.png">images/onlineAnalysis.png</file>
+<file alias="SaveAs.png">images/filesaveas.png</file>
+<file alias="FileOpen.png">images/fileopen.png</file>
+</qresource>
+</RCC>
