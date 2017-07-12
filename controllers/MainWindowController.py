@@ -7,7 +7,7 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from PyQt4.QtSql import *
 
-from model.Algorithms import SimleKMeans
+from models.Algorithms import SimleKMeans
 # GUIs Import
 from views import MainWindow, ConfigureFilterDialog
 from views import OpenDatabaseDialog
