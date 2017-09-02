@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'OpenDatabaseDialog.ui'
+# Form implementation generated from reading ui file 'views/OpenDatabaseDialog.ui'
 #
 # Created by: PyQt4 UI code generator 4.11.4
 #
@@ -53,17 +53,23 @@ class Ui_Dialog(object):
         self.gridLayout.addWidget(self.hostLineEdit, 0, 1, 1, 1)
         self.label_2 = QtGui.QLabel(Dialog)
         self.label_2.setObjectName(_fromUtf8("label_2"))
-        self.gridLayout.addWidget(self.label_2, 1, 0, 1, 1)
+        self.gridLayout.addWidget(self.label_2, 2, 0, 1, 1)
         self.databaseLineEdit = QtGui.QLineEdit(Dialog)
         self.databaseLineEdit.setObjectName(_fromUtf8("databaseLineEdit"))
-        self.gridLayout.addWidget(self.databaseLineEdit, 1, 1, 1, 1)
+        self.gridLayout.addWidget(self.databaseLineEdit, 2, 1, 1, 1)
         self.label_3 = QtGui.QLabel(Dialog)
         self.label_3.setObjectName(_fromUtf8("label_3"))
-        self.gridLayout.addWidget(self.label_3, 2, 0, 1, 1)
+        self.gridLayout.addWidget(self.label_3, 3, 0, 1, 1)
         self.passwordLineEdit = QtGui.QLineEdit(Dialog)
         self.passwordLineEdit.setInputMask(_fromUtf8(""))
         self.passwordLineEdit.setObjectName(_fromUtf8("passwordLineEdit"))
-        self.gridLayout.addWidget(self.passwordLineEdit, 2, 1, 1, 1)
+        self.gridLayout.addWidget(self.passwordLineEdit, 3, 1, 1, 1)
+        self.label_5 = QtGui.QLabel(Dialog)
+        self.label_5.setObjectName(_fromUtf8("label_5"))
+        self.gridLayout.addWidget(self.label_5, 1, 0, 1, 1)
+        self.userLineEdit = QtGui.QLineEdit(Dialog)
+        self.userLineEdit.setObjectName(_fromUtf8("userLineEdit"))
+        self.gridLayout.addWidget(self.userLineEdit, 1, 1, 1, 1)
         self.verticalLayout.addLayout(self.gridLayout)
         spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
         self.verticalLayout.addItem(spacerItem)
@@ -76,6 +82,7 @@ class Ui_Dialog(object):
         self.label.setBuddy(self.hostLineEdit)
         self.label_2.setBuddy(self.databaseLineEdit)
         self.label_3.setBuddy(self.passwordLineEdit)
+        self.label_5.setBuddy(self.databaseLineEdit)
 
         self.retranslateUi(Dialog)
         QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("accepted()")), Dialog.accept)
@@ -88,4 +95,5 @@ class Ui_Dialog(object):
         self.label.setText(_translate("Dialog", "&Host", None))
         self.label_2.setText(_translate("Dialog", "&Datebank", None))
         self.label_3.setText(_translate("Dialog", "&Passwort", None))
+        self.label_5.setText(_translate("Dialog", "&Nutzer", None))
 

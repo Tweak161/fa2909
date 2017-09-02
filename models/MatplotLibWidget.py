@@ -4,26 +4,7 @@ from PyQt4 import QtGui, QtCore
 import random
 
 
-class MatplotlibWidgetClass(Canvas):
-    """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
-    def __init__(self, parent=None, title='Title', xlabel='x label', ylabel='y label', dpi=100, hold=False):
-        super(MatplotlibWidgetClass, self).__init__(Figure())
-
-        self.setParent(parent)
-        self.figure = Figure(dpi=dpi)
-        self.canvas = Canvas(self.figure)
-        self.theplot = self.figure.add_subplot(111)
-
-        self.theplot.set_title(title)
-        self.theplot.set_xlabel(xlabel)
-        self.theplot.set_ylabel(ylabel)
-
-    def plotDataPoints(self, x, y):
-        self.theplot.plot(x,y)
-        self.draw()
-
-
-class MyMplCanvas(Canvas):
+class MplCanvas(Canvas):
     """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
 
     def __init__(self, parent=None, width=5, height=4, dpi=100):
@@ -44,11 +25,11 @@ class MyMplCanvas(Canvas):
         pass
 
 
-class MyDynamicMplCanvas(MyMplCanvas):
+class DynamicMplCanvas(MplCanvas):
     """A canvas that updates itself every second with a new plot."""
 
     def __init__(self, *args, **kwargs):
-        MyMplCanvas.__init__(self, *args, **kwargs)
+        MplCanvas.__init__(self, *args, **kwargs)
         timer = QtCore.QTimer(self)
         timer.timeout.connect(self.update_figure)
         timer.start(1000)

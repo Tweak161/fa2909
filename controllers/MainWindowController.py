@@ -6,12 +6,23 @@ import numpy as np
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from PyQt4.QtSql import *
+import ast
 
-from models.Algorithms import SimleKMeans
-# GUIs Import
+
+from models.MatplotLibWidget import MplCanvas
+from models.MatplotLibWidget import DynamicMplCanvas
+
+# Views
 from views import MainWindow, ConfigureFilterDialog
 from views import OpenDatabaseDialog
-from views import SimpleKMeansDialog
+
+# Controller
+from controllers import KNeighborsClassifierDialogController
+
+# Models
+from models.Pipeline import MyPipeline
+from models import Filter
+from models.Database import DatabaseConnection
 
 # Spalten Indices
 SEPAL_LENGTH = 0                              #   Umbenennen in   sepal_length
@@ -26,31 +37,51 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
     def __init__(self):
         super(MainWindowClass, self).__init__()
         self.setupUi(self)
-        self.db = QSqlDatabase.addDatabase("QPSQL")
-        self.irisDataModel = QSqlRelationalTableModel(self)
+
+        self.db = DatabaseConnection()
+        self.irisDataModel = QSqlTableModel(self)
+        self.databaseTableView.setModel(self.irisDataModel)
         self.selected_table_name = None
-        self.selected_algorithm = None
         self.selected_distance_measure = None
         self.num_rows = None
         self.num_columns = None
         self.db_data = None
         self.attributes = None
-        self.class_attributes = None
         self.columns = None
         self.simpleKMeans = None
-        self.attributes_np = None
-        self.class_attributes_np = None
-        self.applied_algorithms = []
+        self.applied_algorithms = []            # Replace with self.pipelines
+        self.selected_filter_list = []
+        self.selected_filter = None
+        self.selected_algorithm_object = None
+        self.pipelines = []
+        self.selected_pipeline_nr = None
+        self.selected_pipeline_object = None
+        self.selected_algorithm_name = None
+        self.selected_filter_name = None
+        self.selected_workpiece = None
+        self.selected_data = None
+        self.selected_id = None
+        self.online_analysis_active = False
 
-        # ###################################################################################################################
+        # #############################################################################################################
+        # Initialize Timers
+        # #############################################################################################################
+        self.process_data_timer = QTimer(self)
+        self.process_data_timer.timeout.connect(self.process_data_timer_cb)
+        self.process_data_timer.start(500)              # 500ms
+
+        # #############################################################################################################
+        # Initialize Plots
+        # #############################################################################################################
+        l1 = QVBoxLayout(self.plotLabel1)
+        self.plot1 = DynamicMplCanvas(self.plotLabel1, width=5, height=4, dpi=100)
+        l1.addWidget(self.plot1)
+
+        # #############################################################################################################
         # Initialize Dialogs
-        # ###################################################################################################################
-        self.simpleKMeansDialog = QDialog()
-        self.simpleKMeansDialog.ui = SimpleKMeansDialog.Ui_SimpleKMeansDialog()
-        self.simpleKMeansDialog.ui.setupUi(self.simpleKMeansDialog)
-        self.simpleKMeansDialog.ui.distanceMeassureComboBox.addItem('Manhatten')
-        self.simpleKMeansDialog.ui.distanceMeassureComboBox.addItem('Cosinus')
-        self.simpleKMeansDialog.ui.distanceMeassureComboBox.addItem('Euklidisch')
+        # #############################################################################################################
+        self.simpleKMeansDialog = KNeighborsClassifierDialogController.Controller()
+        # self.simpleKMeansDialog.setupUi(self.simpleKMeansDialog)
 
         self.openDatabaseDialog = QDialog()
         self.openDatabaseDialog.ui = OpenDatabaseDialog.Ui_Dialog()
@@ -61,33 +92,222 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         self.configureFilterDialog.ui.setupUi(self.configureFilterDialog)
 
         # ###################################################################################################################
-        # Create Connections
+        # Signals
         # ###################################################################################################################
-        self.connect(self.tableSelectionComboBox, SIGNAL("currentIndexChanged(int)"), self.populate_table_view)
+        # QAction
         self.connect(self.actionOpenNewDatabase, SIGNAL("triggered()"), self.action_open_new_database_callback)
         self.connect(self.actionQuit, SIGNAL("triggered()"), self.close)
+        self.connect(self.actionOnlineAnalysis, SIGNAL("triggered()"), self.action_online_analysis_callback)
+
+        # QButton
         self.connect(self.addEntryButton, SIGNAL("clicked()"), self.add_entry)
         self.connect(self.deleteEntryButton, SIGNAL("clicked()"), self.delete_entry)
-        self.connect(self.chooseAlgoComboBox, SIGNAL("currentIndexChanged(int)"), self.set_algo)
         self.connect(self.algoConfigButton, SIGNAL("clicked()"), self.configure_algo)
-        self.connect(self.simpleKMeansDialog.ui.distanceMeassureComboBox, SIGNAL("currentIndexChanged(int)"),
-                     self.set_distance_measure)
-        self.connect(self.applyAlgoButton, SIGNAL("clicked()"), self.apply_algo)
+        self.connect(self.applyAlgoButton, SIGNAL("clicked()"), self.apply_pipeline)
         self.connect(self.configureFilterButton, SIGNAL("clicked()"), self.configure_filter)
         self.connect(self.connectToDatabasePushButton, SIGNAL("clicked()"), self.action_open_new_database_callback)
+        self.connect(self.addFilterButton, SIGNAL("clicked()"), self.add_filter)
+        self.connect(self.deletePipelineButton, SIGNAL("clicked()"), self.delete_pipeline)
 
 
-        # ###################################################################################################################
+        # QTableWidget
+        self.connect(self.appliedFilterTableWidget, SIGNAL("itemSelectionChanged()"),
+                     self.filter_selection_cb)
+        self.connect(self.pipelinesTableWidget, SIGNAL("itemSelectionChanged()"),
+                     self.pipeline_selection_cb)
+        self.connect(self.databaseTableView.selectionModel(), SIGNAL("selectionChanged(QItemSelection, QItemSelection)"), self.id_selection_cb)
+
+        # QComboBox
+        self.connect(self.workpieceSelectionComboBox, SIGNAL("currentIndexChanged(int)"), self.populate_table_view)
+        self.connect(self.chooseAlgoComboBox, SIGNAL("currentIndexChanged(int)"), self.set_algo)
+        self.connect(self.choseFilterComboBox, SIGNAL("currentIndexChanged(int)"), self.select_filter)
+
+
+        # #############################################################################################################
         # Toolbar setup
-        # ###################################################################################################################
+        # #############################################################################################################
         # self.toolBar.addAction(newDatabaseAction)
         # self.menuFile.addAction(newDatabaseAction)
 
+    # #################################################################################################################
+    # Static/Internal Functions
+    # #################################################################################################################
+    def print_filter_selection(self, index):
+        """
+        Function prints parameters for the filter selected in the "appliedFilterTableWidget" in the "Analyse" Tab
+        :param index:
+        :return:
+        """
+        pass
+        # algorithm = self.applied_algorithms[index]
+        # algorithm_result = algorithm.get_algorithm_parameters()
+        # algorithm_result += '\n'
+        # algorithm_result += algorithm.get_filter_parameters()
+        # algorithm_result += '\n'
+        # algorithm_result += algorithm.get_result()
+        # self.algoResultsTextEdit.setPlainText(algorithm_result)
+    def _update_pipeline_info(self):
+        if self.selected_pipeline_nr:
+            index = self.selected_pipeline_nr
+            selected_pipeline = self.pipelines[index]
+            pipeline_info_str = selected_pipeline.get_configuration_info()
+            pipeline_info_str += '\n'
+            pipeline_info_str += selected_pipeline.get_result_info()
+            self.pipelineInfoTextEdit.setPlainText(pipeline_info_str)        # Set pipelineInfoTextEdit
 
+    def _update_algo_table(self):
+        if self.applied_algorithms:
+            for index, algorithm in enumerate(self.pipelines):
+                self.pipelinesTableWidget.setColumnCount(1)
+                self.pipelinesTableWidget.setRowCount(len(self.pipelines))
 
-    # ###################################################################################################################
+                item = QTableWidgetItem()
+                item.setText(algorithm.get_name())
+                item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                self.pipelinesTableWidget.setItem(index, 0, item)
+                self.pipelinesTableWidget.resizeColumnsToContents()
+                self.pipelinesTableWidget.setHorizontalHeaderLabels(QStringList('Pipeline'))
+                self.pipelinesTableWidget.horizontalHeader().setStretchLastSection(True)
+
+    def _update_filter_table(self):
+        self.appliedFilterTableWidget.clear()
+        filter_list = self.selected_pipeline_object.get_filter_list()
+        self.appliedFilterTableWidget.setColumnCount(1)
+        self.appliedFilterTableWidget.setRowCount(len(filter_list))
+
+        for index, filter in enumerate(filter_list):
+            print("Update Algo list")
+
+            item = QTableWidgetItem()
+            item.setText(filter.get_name())
+            item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            self.appliedFilterTableWidget.setItem(index, 0, item)
+            self.appliedFilterTableWidget.resizeColumnsToContents()
+            self.appliedFilterTableWidget.setHorizontalHeaderLabels(QStringList('Filter'))
+            self.appliedFilterTableWidget.horizontalHeader().setStretchLastSection(True)
+
+    # #################################################################################################################
     # Callbacks
-    # ###################################################################################################################
+    # #################################################################################################################
+    def process_data_timer_cb(self):
+        """
+        Callback Function. Executes each 500ms.
+        Queries new database entrys and sends data to pipelines for processing.
+        :return:
+        """
+        if self.db.is_connected() and self.online_analysis_active:
+            pass
+            # Query new data from database and pass it to pipeline for processing
+            data_list = self.db.get_unprocessed_data()
+            data = self.db.get_unprocessed_data2()
+            # print("self.db.get_unprocessed_data() = {}".format(data_list))
+            # print("len(self.db.get_unprocessed_data()) = {}".format(len(data_list)))
+            # print("data[0] = {}".format(data_list[0][0]))
+            for pipeline in self.pipelines:
+                pipeline.set_data(data, self.online_analysis_active)
+                # for data in data_list:
+                #     print("type(data) = {}, data = {}".format(type(data), data))
+                #     data_json = ast.literal_eval(data)
+                #     print("type(data_json) = {}, data_json = {}".format(type(data_json), data_json))
+                #     print("data_json[\"species\"] = ".format(data_json['sepal_width']))
+                #     pipeline.set_data(data_json, self.online_analysis_active)
+
+    def select_filter(self):
+        pass
+        self.selected_filter_name = self.choseFilterComboBox.currentText()
+
+    def add_filter(self):
+        """
+
+        :return:
+        """
+        pass
+        self._update_filter_table()
+        print("add_filter()")
+        if self.selected_filter_name and self.selected_pipeline_object:
+            print("Selected Filter = {}".format(self.selected_filter_name))
+            if self.selected_filter_name == "MinMaxFilter":
+                new_filter = Filter.MinMaxFilter()
+                self.selected_filter = new_filter
+                print("Add Filter to {}".format(self.selected_pipeline_object))
+                self.selected_pipeline_object.add_filter(new_filter)
+
+                self._update_filter_table()
+
+        self._update_pipeline_info()
+
+    def delete_pipeline(self):
+        pass
+        # Get selected Row
+        selected_row = self.pipelinesTableWidget.currentRow()
+        if selected_row:
+            pass
+            print("pipelines[] before removal = {}".format(self.pipelines))
+            selected_item = self.pipelinesTableWidget.currentItem()
+            self.pipelinesTableWidget.removeRow(selected_row)
+            del self.pipelines[selected_row]
+            print("pipelines[] after removal = {}".format(self.pipelines))
+
+    def id_selection_cb(self, index1, index2):
+        q_model_index_list = index1.indexes()       # list with QModelIndex Instances of each column for selected row
+        q_model_index_uuid = q_model_index_list[0]      # column uuid
+        self.selected_id = self.irisDataModel.data(q_model_index_uuid).toString()
+
+        ##############################################################################################################
+        # Update pipelines calculations
+        ##############################################################################################################
+        # Get data
+        q_model_index_data= q_model_index_list[4]
+        data = self.irisDataModel.data(q_model_index_data).toString()
+        # print("data = {}; type of data = {}".format(data, type(data)))
+        # print("data['species'] = {}".format(data['species']))
+
+        data = self.db.get_data(self.selected_id)
+
+        # Set new data for all pipelines
+        for pipeline in self.pipelines:
+            pipeline.set_data(data, False)
+
+        # Pipline calculations changed > Update pipeline info
+        self._update_pipeline_info()
+
+    def filter_selection_cb(self):
+        """
+        Callback function is triggered, when user selects an entry in the "appliedFilterTableWidget"
+        :return:
+        """
+        qmodel_index = self.pipelinesTableWidget.currentIndex()        # currentIndex() returns QModelIndex
+        if not qmodel_index.isValid():
+            return
+        index = qmodel_index.row()
+        self.print_filter_selection(index)
+        print("filter_selection_callback")
+
+    def pipeline_selection_cb(self):
+        """
+        Callback function is triggered, when user selects an entry in the "Angewandte Analyseverfahren" table
+        under the "Analyse" Tab.
+        :return:
+        """
+        # self.algoResultsListTableWidget.select
+        qmodel_index = self.pipelinesTableWidget.currentIndex()        # currentIndex() returns QModelIndex
+        if not qmodel_index.isValid():
+            return
+        index = qmodel_index.row()
+        self.selected_pipeline_nr = self.pipelinesTableWidget.currentIndex().row()
+        self.selected_pipeline_object = self.pipelines[self.selected_pipeline_nr]
+
+        # Update GUI elements
+        self._update_filter_table()
+        self._update_pipeline_info
+
+        selected_pipeline = self.pipelines[index]
+        pipeline_info_str = selected_pipeline.get_configuration_info()
+        pipeline_info_str += '\n'
+        pipeline_info_str += selected_pipeline.get_result_info()
+        self.pipelineInfoTextEdit.setPlainText(pipeline_info_str)        # Set pipelineInfoTextEdit
+
+
     def configure_filter(self):
         """
         This Callback function gets triggered when user clicks the "Konfiguration" button for the filter configuration
@@ -96,27 +316,42 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         """
         if self.configureFilterDialog.exec_():
             pass
+            print("configureFilterDialog")
 
-    def apply_algo(self):
+    def apply_pipeline(self):
         """
         This Callback function gets triggered when user clicks the "Hinzufuegen" Button in the "Analyse" Tab
         :return:
         """
+        # Create new pipeline
+        new_pipeline = MyPipeline(self.selected_algorithm_object)
+        self.pipelines.append(new_pipeline)
+
+
         # Output to console
-        output = self.simpleKMeans.get_algorithm_parameters()
-        output += "\n"
-        output += self.simpleKMeans.get_filter_parameters()
-        output += self.simpleKMeans.get_result()
+        # output = self.simpleKMeans.get_algorithm_parameters()
+        # output += "\n"
+        # output += self.simpleKMeans.get_result()
+        #
+        # self.algoResultsTextEdit.clear()
+        # self.algoResultsTextEdit.appendPlainText(output)
 
-        self.algoResultsTextEdit.clear()
-        self.algoResultsTextEdit.appendPlainText(output)
-        self.applied_algorithms.append(self.selected_algorithm)
-        if not self.applied_algorithms:
-            pass
+        self.applied_algorithms.append(self.simpleKMeans)
+
+        self._update_algo_table()
+
+        if self.selected_pipeline_nr is None:
+            self.selected_pipeline_nr = 0
         else:
-            for algorithm in self.applied_algorithms:
-                self.algoResultsListTextEdit.appendPlainText(algorithm)
+            self.selected_pipeline_nr = len(self.pipelines)-1
+        self.pipelinesTableWidget.selectRow(self.selected_pipeline_nr)
+        self._update_pipeline_info()
 
+        print('Apply Algo \n ')
+
+    def action_online_analysis_callback(self):
+        self.online_analysis_active = not self.online_analysis_active
+        print("online_analysis_activ = {}".format(self.online_analysis_active))
 
     def action_open_new_database_callback(self):
         """
@@ -128,18 +363,16 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         # dialog.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         # Set default dialog Values
         self.openDatabaseDialog.ui.hostLineEdit.setText('localhost')
-        self.openDatabaseDialog.ui.databaseLineEdit.setText('thomas')
+        self.openDatabaseDialog.ui.userLineEdit.setText('fa2909')
+        self.openDatabaseDialog.ui.databaseLineEdit.setText('fa2909')
         self.openDatabaseDialog.ui.passwordLineEdit.setText('0000')
         if self.openDatabaseDialog.exec_():
             host_name = self.openDatabaseDialog.ui.hostLineEdit.text()
+            user_name = self.openDatabaseDialog.ui.userLineEdit.text()
             database_name = self.openDatabaseDialog.ui.databaseLineEdit.text()
             password = self.openDatabaseDialog.ui.passwordLineEdit.text()
 
-        self.db.setHostName(host_name)
-        self.db.setDatabaseName(database_name)
-        self.db.setPassword('0000')
-
-        if not self.db.open():
+        if not self.db.open(host_name, user_name, database_name, password):
             QMessageBox.warning(None, "Asset Manager",
                                 QString("Database Error: %1").arg(self.db.lastError().text()))
             sys.exit(1)
@@ -152,11 +385,12 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
 
             self.currentDatabaseConnectionLabel.setText("Host = {}, Database = {}".format(host_name, database_name))
             # Populate tableSelectionComboBox with available Tables
-            self.tableSelectionComboBox.clear()
-            for tableEntry in self.db.tables():
-                self.tableSelectionComboBox.addItem(tableEntry)
+            # self.tableSelectionComboBox.clear()
+            # for tableEntry in self.db.get_tables():
+            #     self.tableSelectionComboBox.addItem(tableEntry)
+            #     print("add item")
 
-        # self.populate_table_view(0)
+        self.populate_table_view(0)
 
     def populate_table_view(self, index):
         """
@@ -166,104 +400,33 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         # ###################################################################################################################
         # Database Integration
         # ###################################################################################################################
-        self.selected_table_name = self.tableSelectionComboBox.itemText(index)
+        self.selected_table_name = 'data' #self.tableSelectionComboBox.itemText(index)
+
+        # self.selected_workpiece = ...
 
         self.irisDataModel.setTable(self.selected_table_name)             # Load "iris" table from currently open database
 
         self.irisDataModel.select()
 
-        self.tableView.setModel(self.irisDataModel)
+        self.databaseTableView.setModel(self.irisDataModel)
+        # self.connect(self.databaseTableView.selectionModel(), SIGNAL("selectionChanged(QItemSelection, QItemSelection)"), self.id_selection_cb)
+
         # # Set custom Delegate
-        # self.tableView.setItemDelegate()
-        self.tableView.setSelectionMode(QTableView.SingleSelection)
-        self.tableView.setSelectionBehavior(QTableView.SelectRows)
-        self.tableView.resizeColumnsToContents()
+        # self.databaseTableView.setItemDelegate()
+        self.databaseTableView.setSelectionMode(QTableView.SingleSelection)
+        self.databaseTableView.setSelectionBehavior(QTableView.SelectRows)
+        self.databaseTableView.resizeColumnsToContents()
 
-        # Update number of Rows and Columns. Safe DB Content to memory
-        query = QSqlQuery()
-        query.setForwardOnly(True)
-        query.prepare("SELECT * FROM {}".format(self.selected_table_name))
-        query.exec_()
-
-        self.num_rows = query.size()
-        self.num_columns = query.record().count()
-
-        # fieldNo = query.record().indexOf('petal_length')
-
-        self.attributes_np = np.zeros((self.num_rows, self.num_columns - 1), dtype='float')
-        self.class_attributes_np = np.zeros((self.num_rows, 1), dtype='str')
-
-        self.attributes = [[0 for x in range(self.num_columns - 1)] for y in range(self.num_rows)]
-        self.class_attributes = [[0 for x in range(1)] for y in range(self.num_rows)]
-        self.db_data = [[0 for x in range(self.num_columns)] for y in range(self.num_rows)]
-
-
-        row_counter = 0
-        while query.next():             # query contains one table column. query.next() steps one row forward
-            for column in range(0, self.num_columns):
-                self.db_data[row_counter][column] = str(query.value(column).toString())
-                if column < self.num_columns -1:
-                    self.attributes[row_counter][column] = int(query.value(column).toString())
-                    self.attributes_np[row_counter][column] = float(query.value(column).toString())
-                else:
-                    pass
-                    self.class_attributes[row_counter] = str(query.value(column).toString())
-                    self.class_attributes_np = str(query.value(column).toString())
-
-                print(query.value(column).toString())
-            row_counter += 1
-
-            #     print("Spalte = {}".format(column))
-            # colum_values = query.value(colsumn).toString()
-            # print(colum_values)
-        # print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-        # print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-        #
-        # print(self.db_data)
-        # query.prepare("SELECT * FROM {} WHERE id = '{}'".format(self.selected_table_name), 0)
-        singleCol = query.prepare("SELECT {} FROM {}".format("sepal_width", self.selected_table_name))
-        query.exec_()
-        # print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-        # print("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-        # while query.next():
-        #     sepal_width = query.record().toString()
-        #     print('#################################')
-        #     print(sepal_width)
-        #     print('#################################')
-
-
-        wholeTable = query.prepare("SELECT * FROM {}".format(self.selected_table_name))
-        query.exec_()
-
+        self.extract_data()
         self.setup_dialoges()
 
-        # print(query.record())
-        # while query.next():
-        #     sepal_width = query.value(1)
-        #     print(sepal_width)
-
-
-        # self.rows =
-
-        # x=[0,10,100]
-        # y=[3,4,5]
-        #
-        # self.mplwidget = MatplotlibWidgetClass(self.centralwidget)
-        # self.mplwidget.setGeometry(QRect(70, 50, 600, 500))
-        # self.mplwidget.setObjectName("mplwidget")
-        # self.mplwidget.plotDataPoints(x, y)
-        #
-        #
-        # self.mplwidget2 = MyMplCanvas()
-        # self.mplwidget2.setGeometry(QRect(70, 50, 600, 500))
-        # self.mplwidget2.setObjectName("mplwidget")
-        # self.mplwidget2.plotDataPoints(x, y)
-
-        # l = QtGui.QVBoxLayout(self.plotWidget)
-        # dc1 = MyDynamicMplCanvas(self.plotWidget, width=5, height=4, dpi=100)
-        # dc2 = MyDynamicMplCanvas(self.plotWidget, width=5, height=4, dpi=100)
-        # l.addWidget(dc1)
-        # l.addWidget(dc2)
+    def extract_data(self):
+        """
+        Get data from selected data entry and save it to memory
+        :return:
+        """
+        # Update number of Rows and Columns. Safe DB Content to memory
+        # self.selected_data = self.db.get_data(self.selected_id)
 
     def add_entry(self):
         """
@@ -271,18 +434,18 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         It adds an Entry to the database
         :return:
         """
-        row = self.tableView.currentIndex().row() \
-            if self.tableView.currentIndex().isValid() else 0
+        row = self.databaseTableView.currentIndex().row() \
+            if self.databaseTableView.currentIndex().isValid() else 0
 
         QSqlDatabase.database().transaction()
         self.irisDataModel.insertRow(row)
         index = self.irisDataModel.index(row, 0)
-        self.tableView.setCurrentIndex(index)
+        self.databaseTableView.setCurrentIndex(index)
 
         query = QSqlQuery()
         query.exec_("SELECT MAX(id) FROM {}".format(self.selected_table_name))
         QSqlDatabase.database().commit()
-        self.tableView.edit(index)
+        self.databaseTableView.edit(index)
 
     def delete_entry(self):
         """
@@ -292,13 +455,12 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         :return:
         """
         # FIX: Funktion loescht immer alle Eintraege mit gleichem Inhalt
-        index = self.tableView.currentIndex()
+        index = self.databaseTableView.currentIndex()
         if not index.isValid():
             return
 
         self.irisDataModel.removeRow(index.row())
         self.irisDataModel.submitAll()
-
 
     def configure_algo(self):
         """
@@ -309,32 +471,24 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         """
         pass
         # Create Dialog
-
-        if self.selected_algorithm == 'SimpleKMeans':
+        self.selected_algorithm_name = str(self.chooseAlgoComboBox.currentText())
+        if self.selected_algorithm_name == 'KNeighborsClassifier':
 
             if self.simpleKMeansDialog.exec_():
-                pass
-            # Following Code is executed after closing simpleKMeansDialog Window
-            algo_k_means_max_iterations = self.simpleKMeansDialog.ui.maxIterationsLineEdit.text()
-            algo_k_means_number_clusters = self.simpleKMeansDialog.ui.numClustersLineEdit.text()
-            algo_k_means_seed = self.simpleKMeansDialog.ui.seedLineEdit.text()
-            self.simpleKMeans = SimleKMeans(algo_k_means_max_iterations, algo_k_means_number_clusters, algo_k_means_seed)
+                self.simpleKMeans = self.simpleKMeansDialog.get_algorithm()
+            if self.simpleKMeans:
+                # for row in range(0, self.num_rows):
+                # self.simpleKMeans.set_attributes(X)
+                # self.simpleKMeans.set_class(Y)
+                # self.simpleKMeans.train_model()
+                # TODO: Execute Algorithm
 
-            X = self.db_data[:][0:self.num_columns-2]
-            Y = []
-            for row in range(0, self.num_rows):
-                Y.append(self.db_data[row][4])
-            print("self.db_data[:][0:self.num_columns-2] = {}".format(Y))
-            # print("self.db_data[1][4] = {}".format(Y))
+                self.selected_algorithm_object = self.simpleKMeans
 
-            self.simpleKMeans.set_attributes(X)
-            self.simpleKMeans.set_class(Y)
-            self.simpleKMeans.train_model()
-
-        elif self.selected_algorithm == 'FilteredClusterer':
+        elif self.selected_algorithm_name == 'FilteredClusterer':
             pass
 
-        elif self.selected_algorithm == 'Cobweb':
+        elif self.selected_algorithm_name == 'Cobweb':
             pass
 
     ###################################################################################################################
@@ -347,19 +501,8 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         This Function is executed, when the Algorithms Combobox is changed
         :return:
         """
-        self.selected_algorithm = self.chooseAlgoComboBox.itemText(index)
-        print(self.selected_algorithm)
-
-    def set_distance_measure(self, index):
-        """
-        Callback Function. SimpleKMeansDialog
-        This Function is exectued when the "Distanzmass" ComboBox is changed.
-        It sets the value for the Distanzmass
-        :return:
-        """
-        pass
-        self.selected_distance_measure = self.simpleKMeansDialog.ui.distanceMeassureComboBox.itemText(index)
-        print(self.selected_distance_measure)
+        self.selected_algorithm_name = self.chooseAlgoComboBox.itemText(index)
+        print(self.selected_algorithm_name)
 
     def setup_dialoges(self):
         """
@@ -370,70 +513,6 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         pass
 
 
-# if __name__ == '__main__':
-#     ###################################################################################################################
-#     # Start GUI
-#     ###################################################################################################################
-#     app = QApplication(sys.argv)
-#
-#
-#     # ###################################################################################################################
-#     # # Data Integration
-#     # ###################################################################################################################
-#     # Establish database connection
-#
-#
-#
-#     #
-#     # # Connect to database
-#     # database_connection = DatabaseConnection('thomas', 'thomas', 'localhost', '0000')
-#     #
-#     # # Create new table "iris"
-#     # database_connection.create_table('iris', ["sepal_length varchar (50) NOT NULL",
-#     #                                     "sepal_width varchar (40) NOT NULL",
-#     #                                     "petal_length varchar (40) NOT NULL",
-#     #                                     "petal_width varchar (40) NOT NULL",
-#     #                                     "species varchar (24) check (species in ('setosa', 'versicolor', 'virginica'))"])
-#     # # Import values from CSV
-#     # database_connection.insert_iris()
-#     #
-#     # # Insert new record
-#     # database_connection.insert_new_record("iris", "sepal_length, sepal_width, petal_length, petal_width, species",
-#     #                                       "'1111', '1111', '1111', '1111', 'setosa'")
-#     #
-#     # print('##########################################################################################################')
-#     # print('print_table()')
-#     # print('##########################################################################################################')
-#     # # Print table "iris"
-#     # database_connection.print_table('iris')
-#     #
-#     # print('##########################################################################################################')
-#     # print('print_column_names()')
-#     # print('##########################################################################################################')
-#     # # Print table columns from table "iris"
-#     # database_connection.print_column_names()
-#     #
-#     # # Delete/Drop table "iris"
-#     # # database_connection.drop_table('iris')
-#     #
-#     # ###################################################################################################################
-#     # # Pre Processing
-#     # ###################################################################################################################
-#     #
-#     # ###################################################################################################################
-#     # # Analysis
-#     # ###################################################################################################################
-#     #
-#     # ###################################################################################################################
-#     # # Visualisation
-#     # ###################################################################################################################
-#
-#     ###################################################################################################################
-#     # Show GUI
-#     ###################################################################################################################
-#     form = MainWindowClass()
-#     form.show()
-#     app.exec_()
 #
 
 

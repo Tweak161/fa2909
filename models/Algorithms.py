@@ -1,27 +1,88 @@
-from sklearn.cross_validation import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.cross_validation import cross_val_score
+from sklearn.model_selection import cross_val_score
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.pipeline import Pipeline
 from matplotlib import pyplot as plt
 import numpy as np
+# from django.db import models
+
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from sklearn.cluster import KMeans
+from sklearn import datasets
 
 
-class Cluster:
-    pass
+class Algorithm(object):
+    def __init__(self):
+        super(Algorithm, self).__init__()
+        self.name = None
+        self.data_component1 = None
+        self.auto_config = False
+
+    def get_name(self):
+        """
+        Function returns the name of the algorithm/class as a string
+        :return: (str) name of algorithm
+        """
+        return self.name
+
+    def auto_config_on(self):
+        if self.auto_config is True:
+            return True
+        else:
+            return False
+
+    def set_auto_config(self, autoconfig):
+        self.auto_config = autoconfig
+
+    def set_data(self, data):
+        print("parameter data in Algorithms.py: {}".format(data))
+        self.data_component1 = data
+        self.calculate()
+        print("Set new data in Algorithm Instance: {}".format(self))
+
+    def calculate(self):
+        """
+        Calculate
+        Must be reimplemented for every subclass
+        :return:
+        """
+
+    def return_parameters(self):
+        pass
+
+class Cluster(Algorithm):
+    def __init__(self):
+        super(Cluster, self).__init__()
 
 
-class SimleKMeans(Cluster):
+class SimpleKMeans(Cluster):
+    def __init__(self, n_neighbors=3, metric='euclidean', algorithm='auto', leaf_size=30):
+        super(KNeighborsClassifier, self).__init__()
+        pass
+
+
+class KNeighborsClassifier(Cluster):
     """
-    This class implements a SimpleKMeans Cluster Analasys
+    This class implements a KNeighborsClassifier Classifier
     """
-    def __init__(self, max_iterations=10, number_clusters=2, seed=12):
+    def __init__(self, n_neighbors=3, metric='euclidean', algorithm='auto', leaf_size=30):
+        super(KNeighborsClassifier, self).__init__()
         # User definable parameters
-        self.distance_measure = None
-        self.algo_k_means_max_iterations = max_iterations
-        self.algo_k_means_number_clusters = number_clusters
-        self.algo_k_means_seed = seed
+        self.name = "KNeighborsClassifier"
+        self.n_neighbors = n_neighbors
+        self.metric = metric
+        self.algorithm = algorithm
+        self.leaf_size = leaf_size
         self.cross_validation = True
+
+        self.parameters = {"n_neighbors": self.n_neighbors,
+                           "metric": self.metric,
+                           "algorithm": self.algorithm,
+                           "leaf_size": self.leaf_size,
+                           "cross_validation": self.cross_validation
+                           }
 
         # Attributes
         self.X = None
@@ -29,9 +90,13 @@ class SimleKMeans(Cluster):
         self.accuracy = None
 
         # Filter DEBUG: Erstelle Filter Klasse
-        self.filter_type = "MinMax Filter"
-        self.filter_norm = 1
-        self.filter_std = 2
+        self.filter_list = []
+        # self.filter_type = "MinMax Filter"
+        # self.filter_norm = 1
+        # self.filter_std = 2
+
+    def get_parameters(self):
+        return self.parameters
 
     def set_attributes(self, x):
         """
@@ -40,7 +105,6 @@ class SimleKMeans(Cluster):
         :return:
         """
         self.X = x
-
 
     def set_class(self, y):
         """
@@ -97,39 +161,28 @@ class SimleKMeans(Cluster):
         scores = cross_val_score(scaling_pipeline, X_broken, self.Y, scoring='accuracy')
         print("The pipeline scored an average accuracy for is {0:.1f}%".format(np.mean(transformed_scores) * 100))
 
-    def get_accuracy(self):
-        """
-        This Function returns the accuracy of the model
-        :return: (int) Accuracy of model
-        """
-        return self.accuracy
-
-    def get_algorithm_parameters(self):
+    def get_configuration_info(self):
         """
         This function returns information about selected algorithm and selected parameters
         :return: (str) Returns selected algorithm and selected parameters as string
         """
         pass
-        algo_info = "Angewandter Algorithmus: {}\n".format("Simple K Means")
+        algo_info = "Algorithmus - {}\n".format(self.name)
         algo_info += "\n"
         algo_info += "Parameter\n"
-        algo_info += "{}{}\n".format("Max Anzahl an Iterationen = ", self.algo_k_means_max_iterations)
-        algo_info += "{}{}\n".format("Max Anzahl an Clustern = ", self.algo_k_means_number_clusters)
-        algo_info += "{}{}\n".format("Seed = ", self.algo_k_means_seed)
-        algo_info += "{}{}\n".format("Cross Validation = ", self.cross_validation)
+        for parameter_key in self.parameters:
+            algo_info += "{}: {} \n".format(parameter_key, self.parameters[parameter_key])
         return algo_info
 
-    def get_filter_parameters(self):
-        """
-        This function returns information about selected filter and selected parameters
-        :return: (str) Returns selected filter and selected parameters as string
-        """
-        filter_info = "Angewandter Filter: {}\n".format(self.filter_type)
-        filter_info += "\n"
-        filter_info += "Parameter"
-        filter_info += "{}{}\n".format("Normalisierung = ", self.filter_norm)
-        filter_info += "{}{}\n".format("Standardabweichung = ", self.filter_std)
-        return filter_info
+    # def get_filter_parameters(self):
+    #     """
+    #     This function returns information about selected filter and selected parameters
+    #     :return: (str) Returns selected filter and selected parameters as string
+    #     """
+    #     for filter in self.filter_list:
+    #         filter_info = filter.get_info()
+    #         filter_info += "\n"
+    #     return filter_info
 
     def get_result(self):
         """
@@ -151,5 +204,67 @@ class SimleKMeans(Cluster):
         algo_results += "class                  Iris-setosa Iris-versicolor     Iris-setosa\n"
         return algo_results
 
+    def plot_result(self):
+        """
+        Function plots result. It returns a instance of MatplotLibCanvas
+        :return:
+        """
+        np.random.seed(5)
 
+        centers = [[1, 1], [-1, -1], [1, -1]]
+        iris = datasets.load_iris()
+        X = iris.data
+        y = iris.target
+
+        estimators = {'k_means_iris_3': KMeans(n_clusters=3),
+                      'k_means_iris_8': KMeans(n_clusters=8),
+                      'k_means_iris_bad_init': KMeans(n_clusters=3, n_init=1,
+                                                      init='random')}
+
+        fignum = 1
+        for name, est in estimators.items():
+            fig = plt.figure(fignum, figsize=(4, 3))
+            plt.clf()
+            ax = Axes3D(fig, rect=[0, 0, .95, 1], elev=48, azim=134)
+
+            plt.cla()
+            est.fit(X)
+            labels = est.labels_
+
+            ax.scatter(X[:, 3], X[:, 0], X[:, 2], c=labels.astype(np.float))
+
+            ax.w_xaxis.set_ticklabels([])
+            ax.w_yaxis.set_ticklabels([])
+            ax.w_zaxis.set_ticklabels([])
+            ax.set_xlabel('Petal width')
+            ax.set_ylabel('Sepal length')
+            ax.set_zlabel('Petal length')
+            fignum = fignum + 1
+
+        # Plot the ground truth
+        fig = plt.figure(fignum, figsize=(4, 3))
+        plt.clf()
+        ax = Axes3D(fig, rect=[0, 0, .95, 1], elev=48, azim=134)
+
+        plt.cla()
+
+        for name, label in [('Setosa', 0),
+                            ('Versicolour', 1),
+                            ('Virginica', 2)]:
+            ax.text3D(X[y == label, 3].mean(),
+                      X[y == label, 0].mean() + 1.5,
+                      X[y == label, 2].mean(), name,
+                      horizontalalignment='center',
+                      bbox=dict(alpha=.5, edgecolor='w', facecolor='w'))
+        # Reorder the labels to have colors matching the cluster results
+        y = np.choose(y, [1, 2, 0]).astype(np.float)
+        ax.scatter(X[:, 3], X[:, 0], X[:, 2], c=y)
+
+        ax.w_xaxis.set_ticklabels([])
+        ax.w_yaxis.set_ticklabels([])
+        ax.w_zaxis.set_ticklabels([])
+        ax.set_xlabel('Petal width')
+        ax.set_ylabel('Sepal length')
+        ax.set_zlabel('Petal length')
+        plt.show()
 
