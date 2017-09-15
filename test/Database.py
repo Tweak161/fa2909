@@ -6,6 +6,7 @@ from threading import Event
 import os
 import datetime
 import pandas as pd
+import Generator
 
 
 class SimulationThread(Thread):
@@ -37,6 +38,7 @@ class DatabaseConnection(object):
         self.stop_flag = Event()
         self.simulation_thread = SimulationThread(self, self.stop_flag)
         self.connected = False
+        self.generator = Generator.Generator()
 
         try:
             self.db_name = db_name
@@ -62,6 +64,13 @@ class DatabaseConnection(object):
         """
         return self.connected
 
+    def simulate_training_data(self):
+        """
+        This function generates simulated training data and saves it to the postgresql database.
+        The function is similar to simulate_logging(), the generated JSON structures are the same.
+        However it the simulated plantdata is already classified and isn't generated periodically.
+        :return:
+        """
 
     def start_logging_simulation(self, period):
         """
@@ -90,6 +99,28 @@ class DatabaseConnection(object):
         return max_part_id
 
     def simulate_logging(self):
+        """
+        Function writes simulated plant data into postgres database.
+        Function is static and is periodically called by the SimulationThread Thread
+        :return:
+        """
+        data = self.generator.generate_data()
+        data_json = json.dumps(data)
+
+        part_id = self.get_highest_id() + 1
+        component_id = 1
+
+        # Add new part
+        insert_command = "INSERT INTO data (time, part_id, component_id, processed, data)" \
+                         " VALUES ('{}', {}, {}, {}, '{}')".format('now()',
+                                                                   part_id,
+                                                                   component_id,
+                                                                   'False',
+                                                                   data_json)
+
+        self.cursor.execute(insert_command)
+
+    def simulate_logging_old(self):
         """
         Function writes to database periodically. This simulates logging
         :return:

@@ -48,6 +48,9 @@ class Ui_MainWindow(object):
         self.connectToDatabasePushButton.setObjectName(_fromUtf8("connectToDatabasePushButton"))
         self.horizontalLayout_8.addWidget(self.connectToDatabasePushButton)
         self.dbLayout.addLayout(self.horizontalLayout_8)
+        self.startLoggingSimulationPushButton = QtGui.QPushButton(self.dataintegrationTab)
+        self.startLoggingSimulationPushButton.setObjectName(_fromUtf8("startLoggingSimulationPushButton"))
+        self.dbLayout.addWidget(self.startLoggingSimulationPushButton)
         self.horizontalLayout_9 = QtGui.QHBoxLayout()
         self.horizontalLayout_9.setObjectName(_fromUtf8("horizontalLayout_9"))
         self.label_21 = QtGui.QLabel(self.dataintegrationTab)
@@ -487,12 +490,13 @@ class Ui_MainWindow(object):
         self.label_16.setBuddy(self.chooseAlgoComboBox)
 
         self.retranslateUi(MainWindow)
-        self.tabWidget.setCurrentIndex(1)
+        self.tabWidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(_translate("MainWindow", "Prototyp - Automatisierte industrielle Datenanalyse", None))
         self.connectToDatabasePushButton.setText(_translate("MainWindow", "Datenbankverbindung Herstellen", None))
+        self.startLoggingSimulationPushButton.setText(_translate("MainWindow", "Start Logging Simulation", None))
         self.label_21.setText(_translate("MainWindow", "Werkstück", None))
         self.currentDatabaseConnectionLabel.setText(_translate("MainWindow", "Datenbank Name + Tabelle Name", None))
         self.addEntryButton.setText(_translate("MainWindow", "&Add Entry", None))

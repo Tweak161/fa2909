@@ -1,6 +1,9 @@
 import Database
 from PyQt4.QtGui import *
 import sys
+import Generator
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 if __name__ == '__main__':
@@ -9,10 +12,11 @@ if __name__ == '__main__':
 
     database_connection = Database.DatabaseConnection('fa2909', 'fa2909', 'localhost', '0000')
 
-    # database_connection.simulate_logging()
+    generator = Generator.Generator()
+
+    generator.plot_generated_data()
+
     database_connection.start_logging_simulation(1)
 
-    # Infinite loop
-    while True:
-        pass
+
 
