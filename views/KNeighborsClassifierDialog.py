@@ -25,9 +25,9 @@ except AttributeError:
 class Ui_KNeighborsClassifierDialog(object):
     def setupUi(self, KNeighborsClassifierDialog):
         KNeighborsClassifierDialog.setObjectName(_fromUtf8("KNeighborsClassifierDialog"))
-        KNeighborsClassifierDialog.resize(300, 350)
-        KNeighborsClassifierDialog.setMinimumSize(QtCore.QSize(300, 350))
-        KNeighborsClassifierDialog.setMaximumSize(QtCore.QSize(300, 350))
+        KNeighborsClassifierDialog.resize(400, 350)
+        KNeighborsClassifierDialog.setMinimumSize(QtCore.QSize(400, 350))
+        KNeighborsClassifierDialog.setMaximumSize(QtCore.QSize(400, 350))
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(_fromUtf8(":/MainWindowIcon.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         KNeighborsClassifierDialog.setWindowIcon(icon)
@@ -94,7 +94,7 @@ class Ui_KNeighborsClassifierDialog(object):
         QtCore.QMetaObject.connectSlotsByName(KNeighborsClassifierDialog)
 
     def retranslateUi(self, KNeighborsClassifierDialog):
-        KNeighborsClassifierDialog.setWindowTitle(_translate("KNeighborsClassifierDialog", "Dialog", None))
+        KNeighborsClassifierDialog.setWindowTitle(_translate("KNeighborsClassifierDialog", "KNeighborsClassifier - Parametrisierung", None))
         self.label_7.setText(_translate("KNeighborsClassifierDialog", "Autofit Parameter", None))
         self.label.setText(_translate("KNeighborsClassifierDialog", "&Distanzmaß", None))
         self.label_5.setText(_translate("KNeighborsClassifierDialog", "&Cross Validation", None))

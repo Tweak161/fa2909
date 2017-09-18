@@ -6,7 +6,7 @@ from threading import Event
 import os
 import datetime
 import pandas as pd
-import Generator
+from models import Generator
 
 
 class SimulationThread(Thread):
@@ -30,7 +30,7 @@ class SimulationThread(Thread):
 
 
 class DatabaseConnection(object):
-    def __init__(self, db_name, db_user, db_host, db_password):
+    def __init__(self):
         super(DatabaseConnection, self).__init__()
         self.seqnr_slam = 0
         self.run = 1
@@ -39,7 +39,14 @@ class DatabaseConnection(object):
         self.simulation_thread = SimulationThread(self, self.stop_flag)
         self.connected = False
         self.generator = Generator.Generator()
+        self.db_name = None
+        self.db_user = None
+        self.db_host = None
+        self.db_password = None
+        self.connection = None
+        self.cursor = None
 
+    def connect(self, db_name, db_user, db_host, db_password):
         try:
             self.db_name = db_name
             self.db_user = db_user
@@ -50,9 +57,11 @@ class DatabaseConnection(object):
                                                                                                 db_host,
                                                                                                 db_password))
             print("Connection status: {}".format(self.connection))
+            print("Connection Status = {}".format(self.connection.status))
             self.connected = True
             self.connection.autocommit = True
             self.cursor = self.connection.cursor()
+
         except:
             print('Cannot connect to database')
             self.connected = False
@@ -64,29 +73,52 @@ class DatabaseConnection(object):
         """
         return self.connected
 
-    def simulate_training_data(self):
+    def generate_training_data(self):
         """
         This function generates simulated training data and saves it to the postgresql database.
         The function is similar to simulate_logging(), the generated JSON structures are the same.
         However it the simulated plantdata is already classified and isn't generated periodically.
         :return:
         """
+        data = self.generator.generate_training_data()
+        data_json = json.dumps(data)
 
-    def start_logging_simulation(self, period):
-        """
-        Function writes data periodicall to postgresql database. Simulates logging
-        :param period: (int) Period in s
-        :return:
-        """
-        self.simulation_thread.set_timeout(period)
-        if self.simulation_thread.is_started():
-            self.stop_flag.clear()
-            print('clear stop flagg')
-        else:
-            self.simulation_thread.start()  # Frequency: 50 Hz
+        part_id = self.get_highest_id() + 1
+        component_id = 1
 
-    def stop_logging_simulation(self):
-        self.stop_flag.set()
+        # Add new part
+        insert_command = "INSERT INTO data (time, part_id, component_id, processed, classified, data)" \
+                         " VALUES ('{}', {}, {}, {}, '{}', '{}')".format('now()',
+                                                                   part_id,
+                                                                   component_id,
+                                                                   'False',
+                                                                   'True',
+                                                                   data_json)
+
+        self.cursor.execute(insert_command)
+
+        string = "Neuer Datenbankeintrag - Training Data: time={}," \
+                        " part_id={}, component_id={}, data={}".format(datetime.datetime,
+                                                                       part_id,
+                                                                       component_id,
+                                                                       data_json)
+        return string
+
+    # def start_logging_simulation(self, period):
+    #     """
+    #     Function writes data periodicall to postgresql database. Simulates logging
+    #     :param period: (int) Period in s
+    #     :return:
+    #     """
+    #     self.simulation_thread.set_timeout(period)
+    #     if self.simulation_thread.is_started():
+    #         self.stop_flag.clear()
+    #         print('clear stop flag')
+    #     else:
+    #         self.simulation_thread.start()  # Frequency: 50 Hz
+
+    # def stop_logging_simulation(self):
+    #     self.stop_flag.set()
 
     def get_highest_id(self):
         pass
@@ -102,7 +134,7 @@ class DatabaseConnection(object):
         """
         Function writes simulated plant data into postgres database.
         Function is static and is periodically called by the SimulationThread Thread
-        :return:
+        :return: (str) Returns info string.
         """
         data = self.generator.generate_data()
         data_json = json.dumps(data)
@@ -119,6 +151,14 @@ class DatabaseConnection(object):
                                                                    data_json)
 
         self.cursor.execute(insert_command)
+
+        string = "Neuer Datenbankeintrag: time={}," \
+                        " part_id={}, component_id={}, data={}".format(datetime.datetime,
+                                                                       part_id,
+                                                                       component_id,
+                                                                       data_json)
+
+        return string
 
     def simulate_logging_old(self):
         """
@@ -256,14 +296,30 @@ class DatabaseConnection(object):
         Drops table > Deletes Table and all values associated with it
 
         :param table_name: Name of table to be deleted
-        :return:
+        :return: (str) Returns status string.
         """
         drop_command = "DROP TABLE {}".format(table_name)
         try:
             self.cursor.execute(drop_command)
+            status = 'Table {} dropped'.format(table_name)
         except p.Error as exception:
-            print('Exception occured in drop_table()')
+            status = 'Exception occured in drop_table()'
             print(exception.pgerror)
+
+    def clear_table(self, table_name):
+        """
+        Deletes all entries in table
+        :param table_name: (str) Name of table to be cleared
+        :return:
+        """
+        command = "DELETE FROM {}".format(table_name)
+        try:
+            self.cursor.execute(command)
+            status = 'Alle Inhalte der Tabelle {} wurden erfolgreich geloescht '.format(table_name)
+        except p.Error as exception:
+            status = 'Fehler: Inhalte der Tabelle {} konnten nicht geloescht werden'.format(table_name)
+            print(exception.pgerror)
+        return status
 
     def query_last_entry(self, message_id):
         """
@@ -290,19 +346,6 @@ class DatabaseConnection(object):
         :return:
         """
         self.connection.commit()
-
-    def new_run(self, carid, msgtype, comment):
-        """
-        Insert new run into database
-        :return:
-        """
-        now = time.time()
-        command = "SELECT run_new({}, NULL, NULL, '{}', '{}')".format(
-            carid,
-            msgtype,
-            comment,
-        )
-        self.cursor.execute(command)
 
 
 

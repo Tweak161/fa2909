@@ -44,6 +44,7 @@ CREATE TABLE public.data(
 	part_id integer NOT NULL,
 	component_id integer NOT NULL,
 	processed bool NOT NULL DEFAULT false,
+	classified bool NOT NULL DEFAULT false,
 	data jsonb NOT NULL
 
 );

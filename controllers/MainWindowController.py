@@ -1,4 +1,5 @@
 import sys  # Access command line
+import os
 
 # Data Analysis
 import numpy as np
@@ -108,7 +109,7 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         self.connect(self.connectToDatabasePushButton, SIGNAL("clicked()"), self.action_open_new_database_callback)
         self.connect(self.addFilterButton, SIGNAL("clicked()"), self.add_filter)
         self.connect(self.deletePipelineButton, SIGNAL("clicked()"), self.delete_pipeline)
-
+        self.connect(self.startRestPushButton, SIGNAL("clicked()"), self.start_rest)
 
         # QTableWidget
         self.connect(self.appliedFilterTableWidget, SIGNAL("itemSelectionChanged()"),
@@ -189,6 +190,15 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
     # #################################################################################################################
     # Callbacks
     # #################################################################################################################
+    def start_rest(self):
+        app_source_dir = os.path.dirname(os.path.dirname(__file__))
+        rest_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'REST', 'mysite', 'manage.py')
+        run_rest_cmd = 'python ' + rest_path + ' runserver'
+        os.system(run_rest_cmd)
+        self.restServerActiveLabel.setStyleSheet("QLabel { background-color : green}")
+
+        # os.system("python ../REST/mysite/manage.py runserver")
+
     def process_data_timer_cb(self):
         """
         Callback Function. Executes each 500ms.
@@ -307,7 +317,6 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         pipeline_info_str += selected_pipeline.get_result_info()
         self.pipelineInfoTextEdit.setPlainText(pipeline_info_str)        # Set pipelineInfoTextEdit
 
-
     def configure_filter(self):
         """
         This Callback function gets triggered when user clicks the "Konfiguration" button for the filter configuration
@@ -373,6 +382,7 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
             password = self.openDatabaseDialog.ui.passwordLineEdit.text()
 
         if not self.db.open(host_name, user_name, database_name, password):
+            self.dbConnectionActiveLabel.setStyleSheet("QLabel { background-color : red}")
             QMessageBox.warning(None, "Asset Manager",
                                 QString("Database Error: %1").arg(self.db.lastError().text()))
             sys.exit(1)
@@ -382,6 +392,7 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
             output = "Datenbank Verbindung erfolgreich hergestellt: Hostname = {}, Datenbank = {}" \
                      "".format(host_name, database_name)
             self.textEdit.setText(output)
+            self.dbConnectionActiveLabel.setStyleSheet("QLabel { background-color : green}")
 
             self.currentDatabaseConnectionLabel.setText("Host = {}, Database = {}".format(host_name, database_name))
             # Populate tableSelectionComboBox with available Tables

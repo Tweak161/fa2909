@@ -67,7 +67,7 @@ class DatabaseConnection(QSqlDatabase):
         data = []
         while query.next():  # query successfully executed
             data_str = str(query.value(0).toString())
-            data_json = ast.literal_eval(data_str)
+            # data_json = ast.literal_eval(data_str)
             data.append(data_str)
         return data
 

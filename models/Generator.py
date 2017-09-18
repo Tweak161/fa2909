@@ -243,16 +243,12 @@ class Generator(object):
             generated_data = self.generate_data()
             force_soll = generated_data['ForceSoll']['Y']
             force_ist = generated_data['ForceIst']['Y']
-            for index in enumerate(force_soll):
+            for index, force_s in enumerate(force_soll):
                 rmse_sum = rmse_sum + sqrt((force_soll[1] - force_ist[1]) ** 2)
             rmse = rmse_sum / len(force_soll)
             rmse_distribution.append(rmse)
-        print('rmse_distribution = {}'.format(rmse_distribution))
         rmse_distribution_std = np.std(rmse_distribution)
         rmse_distribution_mean = np.mean(rmse_distribution)
-        print('rmse = {}'.format((rmse)))
-        print('rmse_distribution_std = {}'.format(rmse_distribution_std))
-        print('rmse_distribution_mean = {}'.format(rmse_distribution_mean))
 
         # Calculate RMSE force
         rmse_sum = 0
