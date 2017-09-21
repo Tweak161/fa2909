@@ -1,5 +1,6 @@
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as Canvas
 from matplotlib.figure import Figure
+from mpl_toolkits.mplot3d import Axes3D
 from PyQt4 import QtGui, QtCore
 import random
 
@@ -9,37 +10,83 @@ class MplCanvas(Canvas):
 
     def __init__(self, parent=None, width=5, height=4, dpi=100):
         fig = Figure(figsize=(width, height), dpi=dpi)
-        self.axes = fig.add_subplot(111)
-
-        self.compute_initial_figure()
+        self.axes = fig.add_subplot(111, projection='3d')
+        # self.Axes3D.mouse_init()
+        self.axes.autoscale(enable=True, tight=None)
 
         Canvas.__init__(self, fig)
         self.setParent(parent)
 
-        Canvas.setSizePolicy(self,
-                                   QtGui.QSizePolicy.Expanding,
-                                   QtGui.QSizePolicy.Expanding)
+        Canvas.setSizePolicy(self, QtGui.QSizePolicy.Expanding,
+                             QtGui.QSizePolicy.Expanding)
         Canvas.updateGeometry(self)
-
-    def compute_initial_figure(self):
-        pass
-
+        self.data = None
+        # self.sca = self.axes.scatter([12000, 12000, 22000], [22000, 33000, 33000])
+        self.sca = self.axes.scatter(0, 0 , c='b')
+        self.axes.add_artist(self.sca)
+        self.sca.set_visible(False)
 
 class DynamicMplCanvas(MplCanvas):
     """A canvas that updates itself every second with a new plot."""
 
     def __init__(self, *args, **kwargs):
         MplCanvas.__init__(self, *args, **kwargs)
-        timer = QtCore.QTimer(self)
-        timer.timeout.connect(self.update_figure)
-        timer.start(1000)
 
-    def compute_initial_figure(self):
-        self.axes.plot([0, 1, 2, 3], [1, 2, 0, 4], 'r')
+    def set_data(self, data):
+        """
+        Add classified sample to plot
+        :return:
+        """
+        self.data = data
+        self._update_figure()
 
-    def update_figure(self):
+    def _update_figure(self):
+        print("update_figure()")
+        # self.sca.set_visible(False)
+        # self.sca = self.axes.scatter([random.randint(0, 10000), random.randint(0, 10000), random.randint(0, 10000)],
+        #                              [random.randint(0, 10000), random.randint(0, 10000), random.randint(0, 10000)])
+        # self.draw()
+
         # Build a list of 4 random integers between 0 and 10 (both inclusive)
-        l = [random.randint(0, 10) for i in range(4)]
-        self.axes.cla()
-        self.axes.plot([0, 1, 2, 3], l, 'r')
+        f1 = []
+        f2 = []
+        f3 = []
+        prediction = []
+        for sample in self.data:
+            features = sample["Features"]
+            print("features = {}".format(features))
+            f1.append(features[0])
+            f2.append(features[1])
+            f3.append(features[2])
+            if sample["Prediction"] == 1:
+                prediction.append('g')
+            if sample["Prediction"] == 2:
+                prediction.append('r')
+            if sample["Prediction"] == 3:
+                prediction.append('b')
+
+        print("Update Figure")
+        print("f1 = {}".format(f1))
+        print("f2 = {}".format(f2))
+        print("f3 = {}".format(f3))
+
+        self.sca.set_visible(False)
+        self.sca = self.axes.scatter(f1, f2, f3, c=prediction)
         self.draw()
+
+        self.axes.set_xlabel('F1 - RMSE Temperatur')
+        self.axes.set_ylabel('F2 - RMSE Kraft')
+        self.axes.set_zlabel('F3 - RMSE Geschwindigkeit')
+
+
+
+        # self.
+        # for sample in self.data:
+        #     feature1, feature2, feature3, feature4 = self.data["Features"]
+        #     prediction = self.data["Prediction"]
+        # # l = [random.randint(0, 10) for i in range(4)]
+        # # self.axes.cla()
+        # # self.axes.plot([0, 1, 2, 3], l, 'r')
+        # # self.draw()
+        # # self.axes
+

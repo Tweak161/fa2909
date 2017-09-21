@@ -62,6 +62,20 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="clearRestPushButton">
+        <property name="text">
+         <string>REST Datenbank löschen</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="plotPushButton">
+        <property name="text">
+         <string>Plot Trainingsdaten</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <spacer name="verticalSpacer">
         <property name="orientation">
          <enum>Qt::Vertical</enum>
@@ -1440,7 +1454,7 @@
      <x>0</x>
      <y>0</y>
      <width>460</width>
-     <height>27</height>
+     <height>25</height>
     </rect>
    </property>
   </widget>

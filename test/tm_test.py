@@ -11,7 +11,10 @@ if __name__ == '__main__':
 
     generator = Generator.Generator()
 
-    generator.plot_generated_data()
+    # generator.plot_generated_data()
+    for i in range(0, 10):
+        X = generator.generate_training_data()
+        print("Classification = {}".format(X["Classification"]))
 
 
 

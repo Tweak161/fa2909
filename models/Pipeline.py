@@ -7,6 +7,11 @@ import numpy as np
 import requests
 import random
 from math import sqrt
+import uuid
+from time import gmtime, strftime
+
+
+NUM_FEATURES = 5
 
 
 class MyPipeline:
@@ -15,13 +20,17 @@ class MyPipeline:
         self.algorithm = algorithm
         self.filter_list = []
         self.name = self.algorithm.get_name()
-        self.data = None
         self.pipeline = Pipeline([
             ('filter', MinMaxScaler()),
             ('algorithm', KNeighborsClassifier())
         ])
         self.auto_configuration = False
         self.cross_val_score = None
+        self.estimator = None
+        self.accuracy = None
+        self.pipeline_id = str(uuid.uuid4())
+        self.data = None
+        self.results = []
 
     def print_results(self):
         pass
@@ -53,63 +62,132 @@ class MyPipeline:
         del self.filter_list[index]
 
     def set_data(self, data, online_analysis_active):
-        self.data = data
-        if online_analysis_active:
-            self.calculate()
-            # self.save_to_rest()
-        else:
-            self.calculate()
+        """
 
-    def calculate(self):
+        :param data: (dict) Dict with database values of one entry
+        :param online_analysis_active:
+        :return: (dict) Same dict as parm1 with added keys 'Prediction' and 'Features'
+        """
+        self.data = data
+        print("set_data()")
+        if online_analysis_active:
+            self._calculate()
+            self.save_to_rest()
+        else:
+            self._calculate()
+        self.results.append(data)
+        return self.data
+
+    def _calculate(self):
+        """
+        Function calculates Features and classifies.
+        :return: (dict) Returns dict with calculated features and classification:
+                        "Features": [feature1, feature2, feature3]
+                        "Prediction": bald_prediction
+        """
         print("Pipeline.calculate()")
-        temperature_ist = self.data['TemperatureIst']
-        temperature_soll = self.data['TemperatureSoll']
-        speed_ist = self.data['SpeedIst']
-        speed_soll =self.data['SpeedSoll']
-        force_ist = self.data['ForceIst']
-        force_soll = self.data['ForceSoll']
-        classification = self.data['Classification']
+        data = self.data
+        # temperature_ist = self.data['TemperatureIst']
+        # temperature_soll = self.data['TemperatureSoll']
+        # speed_ist = self.data['SpeedIst']
+        # speed_soll =self.data['SpeedSoll']
+        # force_ist = self.data['ForceIst']
+        # force_soll = self.data['ForceSoll']
+        # classification = self.data['Classification']
 
         # Calculate Feature1: RMSE Temperature
-        rmse_temperature = self._calc_rmse(self.data, 'TemperatureIst', 'TemperatureSoll')
-        print('rmse_temperature = {}'.format(rmse_temperature))
-        # X = np.zeros((num_samples, num_attributes), dtype='float64')          # Attributes
-        # y = np.zeros(num_samples, dtype='float64')          # Class
-        #
-        # X[:, 0] = sepal_length
-        # X[:, 1] = sepal_width
-        # X[:, 2] = petal_length
-        # X[:, 3] = petal_width
-        #
+        feature1 = self._calc_rmse(data, 'TemperatureIst', 'TemperatureSoll')
+        # Calculate Feature2: RMSE Force
+        feature2 = self._calc_rmse(data, 'ForceIst', 'ForceSoll')
+        # Calculate Feature3: RMSE Speed
+        feature3 = self._calc_rmse(data, 'SpeedIst', 'SpeedSoll')
+
+        Z = np.zeros((1, NUM_FEATURES), dtype='float64')  # Attributes
+        Z[0, 0] = feature1
+        Z[0, 1] = feature2
+        Z[0, 2] = feature3
+
+        bald_prediction = self.estimator.predict(Z)
+
+        print("///Bald Prediction: Features [RT={}, RF={}, RS={} = {}".format(feature1,
+                                                                                      feature2,
+                                                                                      feature3,
+                                                                                      bald_prediction))
+        result = {"Features": [feature1, feature2, feature3],
+                  "Prediction": bald_prediction[0]}
+        self.data.update(result)
+
+    def train_model(self, data_list):
+        """
+        Trains model
+        :param data: (list of dicts) Contains list of classified data entries
+        :return:
+        """
+        print("TRAINING MODEL")
+        num_samples = len(data_list)
+        X = np.zeros((num_samples, NUM_FEATURES), dtype='float64')  # Attributes
+        y = np.zeros(num_samples, dtype='float64')  # Class
+        feature1_list = []
+        feature2_list = []
+        feature3_list = []
+        class_list = []
+
+        # Calculate Features
+        for data in data_list:
+            # Calculate Feature1: RMSE Temperature
+            feature1 = self._calc_rmse(data, 'TemperatureIst', 'TemperatureSoll')
+            feature1_list.append(feature1)
+            # Calculate Feature2: RMSE Force
+            feature2 = self._calc_rmse(data, 'ForceIst', 'ForceSoll')
+            feature2_list.append(feature2)
+            # Calculate Feature3: RMSE Speed
+            feature3 = self._calc_rmse(data, 'SpeedIst', 'SpeedSoll')
+            feature3_list.append(feature3)
+            # Calculate Feature4: Mean Temperature
+            class_list.append(int(data["Classification"]))
+
+        X[:, 0] = feature1_list
+        X[:, 1] = feature2_list
+        X[:, 2] = feature3_list
+
+        y = class_list
+
         # # Create train and test sets
-        # X_train, X_test, y_train, y_test = train_test_split(X, y, random_state = 14)
-        #
-        # if self.algorithm.auto_config_on():
-        #     pass
-        #     # Determine parameter: n_neighbors
-        #     parameter_values = list(range(1, 50))  # Include 20
-        #     opt_parameter = parameter_values[0]
-        #     opt_parameter_score = 0
-        #     for n_neighbors in parameter_values:
-        #         estimator = KNeighborsClassifier(n_neighbors=n_neighbors)
-        #         score = cross_val_score(estimator, X, y, scoring='accuracy')
-        #         if score > opt_parameter_score:
-        #             opt_parameter = n_neighbors
-        #             opt_parameter_score = score
-        #     n_neighbors = opt_parameter
-        # else:
-        #     parameters= self.algorithm.get_parameters()
-        #     n_neighbors = parameters["n_neighbors"]
-        #     metric = parameters["metric"]
-        #     algorithm = parameters["algorithm"]
-        #
-        # estimator = KNeighborsClassifier(n_neighbors=n_neighbors, metric=metric, algorithm=algorithm)
-        #
-        # self.cross_val_score = cross_val_score(estimator, X, y, scoring='accuracy')
-        #
-        # print("RMSE calculate = {}".format(self.cross_val_score))
-        #
-        # result_string = "TODO: Result String"
+        # X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=14)
+
+        if self.algorithm.auto_config_on():
+            pass
+            # Determine parameter: n_neighbors
+            parameter_values = list(range(1, 50))  # Include 20
+            opt_parameter = parameter_values[0]
+            opt_parameter_score = 0
+            for n_neighbors in parameter_values:
+                self.estimator = KNeighborsClassifier(n_neighbors=n_neighbors)
+                score = np.mean(cross_val_score(self.estimator, X, y, scoring='accuracy'))
+                print("opt_param_score = {}, score = {}".format(opt_parameter, score))
+                if score > opt_parameter_score:
+                    opt_parameter = n_neighbors
+                    opt_parameter_score = score
+            n_neighbors = opt_parameter
+            print("n_neighbors = opt_parameter = {}".format(n_neighbors))
+        else:
+            parameters = self.algorithm.get_parameters()
+            n_neighbors = parameters["n_neighbors"]
+            metric = parameters["metric"]
+            algorithm = parameters["algorithm"]
+
+        # self.estimator = KNeighborsClassifier(n_neighbors=n_neighbors, metric=metric, algorithm=algorithm)
+        self.estimator = KNeighborsClassifier()
+
+        self.cross_val_score = cross_val_score(self.estimator, X, y, scoring='accuracy')
+
+        self.estimator.fit(X, y)
+
+        self.accuracy = self.cross_val_score[0] * 100
+
+        print("RMSE calculate = {}".format(self.cross_val_score))
+
+        result_string = "TODO: Result String"
 
     def get_configuration_info(self):
         pass
@@ -166,27 +244,89 @@ class MyPipeline:
         return rmse
 
     def save_to_rest(self):
-        pass
-
+        """
+        Saves Classification results to REST
+        :return:
+        """
+        print('SAVE TO REST')
         url = 'http://localhost:8000/result/'
         # response = requests.get(url)
-        # print("response = {}".format(response))
-        # print("response.json() = {}".format(response.json()))
-
         cross_val_score = self.cross_val_score *100
-        print("RMSE save_to_rest = {}".format(self.cross_val_score))
-        print("POST Results")
-        data = {'Time': 100,
-                'PartId': 1,
-                'ComponentId': 1,
+
+        data = {'Time': strftime("%Y-%m-%d %H:%M:%S", gmtime()),
+                'PartId': self.data["PartId"],
                 'Algorithm': "KNeighborsClassifier",
-                "Pipeline": "2",
+                "Pipeline": self.pipeline_id,
                 "Filter": "MinMax",
-                "Rmse": random.uniform(80, 95)}    # random.uniform(80, 95)
+                "Rmse": self.accuracy,
+                "Prediction": self.data["Prediction"]}    # random.uniform(80, 95)
 
         response = requests.post(url, json=data)
 
+    def get_from_rest(self):
+        url = 'http://localhost:8000/result/'
+        r = requests.get(url)
+        if r.status_code == 200:        # Successfull request
+            json_list = r.json()
+            json_list_results = []
+            for json in json_list:
+                if json['Pipeline'] == self.pipeline_id:
+                    json_list_results.append(json)
+            return json_list_results
+        else:
+            return False
 
+    ###################################################################################################################
+    # Getter/Setter
+    ###################################################################################################################
+    def get_accuracy(self):
+        print("self.accuracy = {}".format(self.accuracy))
+        if self.accuracy is None:
+            return "NA"
+        else:
+            return str(self.accuracy)
 
+    def get_results(self):
+        """
+        Function returns results of pipeline
+        :return: (dict). Dict with results with keys: "Features", "Prediction", "PartId", "ForceIst",
+        "ForceSoll", "SpeedIst", "SpeedSoll", "TemperatureIst", TemperatureSoll"
+        """
+        return self.results
+
+    def get_junk(self):
+        """
+        Function calculates percentage of samples, classified with quality class 3
+        :return: (int) Percentage of samples classified with classification 3
+        """
+        # Calculate percentage of classification 3
+        counter = 0
+        print("self.results = {}".format(self.results))
+        if self.results:
+            for sample in self.results:
+                if sample["Prediction"] == 3:
+                    counter += 1
+            junk_percentage = (counter/len(self.data))*100
+
+            return str(junk_percentage)
+        else:
+            return "NA"
+
+    def get_report(self):
+        """
+
+        :return:
+        """
+        pass
+        no_action_flag = 1
+        result = ""
+        for sample in self.results:
+            if sample["Prediction"] == 3:
+                result += "Ueberpruefe Qualitaet von Werkstueck {}".format(sample["PardId"])
+                no_action_flag = 0
+
+        if no_action_flag == 1:
+            result = "Keine Aktionen notwendig"
+        return result
 
 

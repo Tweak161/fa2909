@@ -9,6 +9,8 @@ from PyQt4.QtGui import *
 from PyQt4.QtSql import *
 import ast
 
+from threading import Thread
+
 
 from models.MatplotLibWidget import MplCanvas
 from models.MatplotLibWidget import DynamicMplCanvas
@@ -26,11 +28,11 @@ from models import Filter
 from models.Database import DatabaseConnection
 
 # Spalten Indices
-SEPAL_LENGTH = 0                              #   Umbenennen in   sepal_length
-SEPAL_WIDTH = ASSETID = 1                   #                   sepal_width
-PETAL_LENGTH = DATE = DESCRIPTION = 2       #                   petal_length
-PETAL_WIDTH = ACTIONID = 3                 #                   petal_width
-SPECIES = 4
+# SEPAL_LENGTH = 0                              #   Umbenennen in   sepal_length
+# SEPAL_WIDTH = ASSETID = 1                   #                   sepal_width
+# PETAL_LENGTH = DATE = DESCRIPTION = 2       #                   petal_length
+# PETAL_WIDTH = ACTIONID = 3                 #                   petal_width
+# SPECIES = 4
 
 
 class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
@@ -71,6 +73,10 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         self.process_data_timer.timeout.connect(self.process_data_timer_cb)
         self.process_data_timer.start(500)              # 500ms
 
+        self.update_gui_timer = QTimer(self)
+        self.process_data_timer.timeout.connect(self.update_ui)
+        self.process_data_timer.start(500)
+
         # #############################################################################################################
         # Initialize Plots
         # #############################################################################################################
@@ -110,6 +116,7 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         self.connect(self.addFilterButton, SIGNAL("clicked()"), self.add_filter)
         self.connect(self.deletePipelineButton, SIGNAL("clicked()"), self.delete_pipeline)
         self.connect(self.startRestPushButton, SIGNAL("clicked()"), self.start_rest)
+        self.connect(self.refreshTableButton, SIGNAL("clicked()"), self.refresh_table)
 
         # QTableWidget
         self.connect(self.appliedFilterTableWidget, SIGNAL("itemSelectionChanged()"),
@@ -119,7 +126,7 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         self.connect(self.databaseTableView.selectionModel(), SIGNAL("selectionChanged(QItemSelection, QItemSelection)"), self.id_selection_cb)
 
         # QComboBox
-        self.connect(self.workpieceSelectionComboBox, SIGNAL("currentIndexChanged(int)"), self.populate_table_view)
+        # self.connect(self.workpieceSelectionComboBox, SIGNAL("currentIndexChanged(int)"), self.populate_table_view)
         self.connect(self.chooseAlgoComboBox, SIGNAL("currentIndexChanged(int)"), self.set_algo)
         self.connect(self.choseFilterComboBox, SIGNAL("currentIndexChanged(int)"), self.select_filter)
 
@@ -177,8 +184,6 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         self.appliedFilterTableWidget.setRowCount(len(filter_list))
 
         for index, filter in enumerate(filter_list):
-            print("Update Algo list")
-
             item = QTableWidgetItem()
             item.setText(filter.get_name())
             item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
@@ -190,14 +195,42 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
     # #################################################################################################################
     # Callbacks
     # #################################################################################################################
-    def start_rest(self):
-        app_source_dir = os.path.dirname(os.path.dirname(__file__))
-        rest_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'REST', 'mysite', 'manage.py')
-        run_rest_cmd = 'python ' + rest_path + ' runserver'
-        os.system(run_rest_cmd)
-        self.restServerActiveLabel.setStyleSheet("QLabel { background-color : green}")
+    def refresh_table(self):
+        self.populate_table_view()
 
+    def start_rest(self):
+        self.restServerActiveLabel.setStyleSheet("QLabel { background-color : green}")
+        thread = Thread(target=rest_thread, args=(10,))
+        try:
+            thread.start()
+        except (KeyboardInterrupt, SystemExit):
+            sys.exit()
         # os.system("python ../REST/mysite/manage.py runserver")
+
+    def update_ui(self):
+        """
+        Updates gui cyclically
+        :return:
+        """
+        # Display Pipeline Results
+        if self.selected_pipeline_object:
+            # Set "Auswertung" > "Genauigkeit [%]"
+            prediction_accuracy = self.selected_pipeline_object.get_accuracy()
+            prediction_accuracy = prediction_accuracy[0:5]
+            self.predictionAccuracyLineEdit.setText(prediction_accuracy)
+
+            # Set "Auswertung" > "Ausschuss [%]"
+            junk_percentage = self.selected_pipeline_object.get_junk()
+            self.junkPercentageLineEdit.setText(junk_percentage)
+
+            # Plot Classification "Auswertung" > "Plot"
+            pipeline_results = self.selected_pipeline_object.get_results()
+            print("rest_response = {}".format(pipeline_results))
+            self.plot1.set_data(pipeline_results)
+
+            # Print Report
+            report = self.selected_pipeline_object.get_report()
+            self.reportTextEdit.setPlainText(report)
 
     def process_data_timer_cb(self):
         """
@@ -207,20 +240,18 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         """
         if self.db.is_connected() and self.online_analysis_active:
             pass
-            # Query new data from database and pass it to pipeline for processing
-            data_list = self.db.get_unprocessed_data()
-            data = self.db.get_unprocessed_data2()
-            # print("self.db.get_unprocessed_data() = {}".format(data_list))
-            # print("len(self.db.get_unprocessed_data()) = {}".format(len(data_list)))
-            # print("data[0] = {}".format(data_list[0][0]))
+            # Train Model
+            training_data = self.db.get_training_data()
             for pipeline in self.pipelines:
-                pipeline.set_data(data, self.online_analysis_active)
-                # for data in data_list:
-                #     print("type(data) = {}, data = {}".format(type(data), data))
-                #     data_json = ast.literal_eval(data)
-                #     print("type(data_json) = {}, data_json = {}".format(type(data_json), data_json))
-                #     print("data_json[\"species\"] = ".format(data_json['sepal_width']))
-                #     pipeline.set_data(data_json, self.online_analysis_active)
+                pipeline.train_model(training_data)
+
+            # Classify
+            # Query new data from database and pass it to pipeline for processing
+            data_list = self.db.get_unprocessed_data2()
+
+            for pipeline in self.pipelines:
+                for data in data_list:
+                    pipeline.set_data(data, self.online_analysis_active)
 
     def select_filter(self):
         pass
@@ -233,13 +264,10 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         """
         pass
         self._update_filter_table()
-        print("add_filter()")
         if self.selected_filter_name and self.selected_pipeline_object:
-            print("Selected Filter = {}".format(self.selected_filter_name))
             if self.selected_filter_name == "MinMaxFilter":
                 new_filter = Filter.MinMaxFilter()
                 self.selected_filter = new_filter
-                print("Add Filter to {}".format(self.selected_pipeline_object))
                 self.selected_pipeline_object.add_filter(new_filter)
 
                 self._update_filter_table()
@@ -252,11 +280,9 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         selected_row = self.pipelinesTableWidget.currentRow()
         if selected_row:
             pass
-            print("pipelines[] before removal = {}".format(self.pipelines))
             selected_item = self.pipelinesTableWidget.currentItem()
             self.pipelinesTableWidget.removeRow(selected_row)
             del self.pipelines[selected_row]
-            print("pipelines[] after removal = {}".format(self.pipelines))
 
     def id_selection_cb(self, index1, index2):
         q_model_index_list = index1.indexes()       # list with QModelIndex Instances of each column for selected row
@@ -269,8 +295,6 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         # Get data
         q_model_index_data= q_model_index_list[4]
         data = self.irisDataModel.data(q_model_index_data).toString()
-        # print("data = {}; type of data = {}".format(data, type(data)))
-        # print("data['species'] = {}".format(data['species']))
 
         data = self.db.get_data(self.selected_id)
 
@@ -291,7 +315,6 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
             return
         index = qmodel_index.row()
         self.print_filter_selection(index)
-        print("filter_selection_callback")
 
     def pipeline_selection_cb(self):
         """
@@ -325,7 +348,6 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         """
         if self.configureFilterDialog.exec_():
             pass
-            print("configureFilterDialog")
 
     def apply_pipeline(self):
         """
@@ -356,11 +378,8 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         self.pipelinesTableWidget.selectRow(self.selected_pipeline_nr)
         self._update_pipeline_info()
 
-        print('Apply Algo \n ')
-
     def action_online_analysis_callback(self):
         self.online_analysis_active = not self.online_analysis_active
-        print("online_analysis_activ = {}".format(self.online_analysis_active))
 
     def action_open_new_database_callback(self):
         """
@@ -399,11 +418,10 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
             # self.tableSelectionComboBox.clear()
             # for tableEntry in self.db.get_tables():
             #     self.tableSelectionComboBox.addItem(tableEntry)
-            #     print("add item")
 
-        self.populate_table_view(0)
+        self.populate_table_view()
 
-    def populate_table_view(self, index):
+    def populate_table_view(self):
         """
         This function populates the tabeleView in the the Datenintegration Window with the database data.
         :return:
@@ -425,6 +443,7 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         # # Set custom Delegate
         # self.databaseTableView.setItemDelegate()
         self.databaseTableView.setSelectionMode(QTableView.SingleSelection)
+        self.databaseTableView.hideColumn(6)
         self.databaseTableView.setSelectionBehavior(QTableView.SelectRows)
         self.databaseTableView.resizeColumnsToContents()
 
@@ -513,7 +532,6 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         :return:
         """
         self.selected_algorithm_name = self.chooseAlgoComboBox.itemText(index)
-        print(self.selected_algorithm_name)
 
     def setup_dialoges(self):
         """
@@ -524,7 +542,13 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         pass
 
 
-#
+def rest_thread(arg):
+    print("Start Rest Server...")
+    rest_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'REST', 'mysite', 'manage.py')
+    run_rest_cmd = 'python ' + rest_path + ' runserver'
+    os.system(run_rest_cmd)
+    while True:
+        pass
 
 
 

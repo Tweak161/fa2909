@@ -143,12 +143,13 @@ class DatabaseConnection(object):
         component_id = 1
 
         # Add new part
-        insert_command = "INSERT INTO data (time, part_id, component_id, processed, data)" \
-                         " VALUES ('{}', {}, {}, {}, '{}')".format('now()',
-                                                                   part_id,
-                                                                   component_id,
-                                                                   'False',
-                                                                   data_json)
+        insert_command = "INSERT INTO data (time, part_id, component_id, processed, classified, data)" \
+                         " VALUES ('{}', {}, {}, {}, '{}', '{}')".format('now()',
+                                                                         part_id,
+                                                                         component_id,
+                                                                         'False',
+                                                                         'False',
+                                                                         data_json)
 
         self.cursor.execute(insert_command)
 

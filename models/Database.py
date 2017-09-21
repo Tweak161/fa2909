@@ -16,7 +16,7 @@ class DatabaseConnection(QSqlDatabase):
         return self.connection.isOpen()
 
     def print_hello(self):
-        print("Hallo")
+        pass
 
     def open(self, host_name, user_name, database_name, password):
         self.connection.setHostName(host_name)
@@ -87,6 +87,7 @@ class DatabaseConnection(QSqlDatabase):
             query.next()
             data_str = str(query.value(0).toString())
             data_json = ast.literal_eval(data_str)
+
         return data_json
 
 
@@ -98,15 +99,42 @@ class DatabaseConnection(QSqlDatabase):
 
         query = QSqlQuery()
         query.setForwardOnly(True)
-        query.prepare("SELECT data FROM data WHERE processed = 'False'")
+        query.prepare("SELECT * FROM data WHERE processed = 'False'")
+        query.exec_()
+        data_list = []
+        if query.isActive():        # query successfully executed
+            while query.next():
+                id = str(query.value(0).toString())  # id (uuid)
+                time = str(query.value(1).toString())  # time
+                part_id = str(query.value(2).toString())  # part_id
+                component_id = str(query.value(3).toString())  # component_id
+                processed = str(query.value(4).toString())  # processed
+                classified = str(query.value(5).toString())  # classified
+                data = str(query.value(6).toString())  # data
+
+                data_json = ast.literal_eval(data)
+                data_json.update({"PartId": part_id})
+                data_list.append(data_json)
+
+        # Flag all data as processd
+        query.prepare("UPDATE data SET processed = 'True' WHERE processed = 'False'")
+        query.exec_()
+
+        return data_list
+
+    def get_training_data(self):
+        query = QSqlQuery()
+        query.setForwardOnly(True)
+        query.prepare("SELECT data FROM data WHERE classified = 'True'")
         query.exec_()
         data = []
-        data = None
-        if query.isActive():        # query successfully executed
-            query.next()
-            data_str = str(query.value(0).toString())
-            data_json = ast.literal_eval(data_str)
-        return data_json
+        if query.isActive():  # query successfully executed
+            while query.next():
+                data_str = str(query.value(0).toString())
+                data_json = ast.literal_eval(data_str)
+                data.append(data_json)
+
+        return data
 
 
 

@@ -38,6 +38,7 @@ COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UU
 
 -- object: public.data | type: TABLE --
 -- DROP TABLE IF EXISTS public.data CASCADE;
+
 CREATE TABLE public.data(
 	id uuid NOT NULL DEFAULT uuid_generate_v1(),
 	time timestamp,
@@ -48,6 +49,7 @@ CREATE TABLE public.data(
 	data jsonb NOT NULL
 
 );
+
 -- ddl-end --
 
 

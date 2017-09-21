@@ -8,6 +8,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtSql import *
 
 from models.DatabaseTest import DatabaseConnection
+import os
 
 class MainWindowClass(QMainWindow, TestAppMainWindow.Ui_TestAppMainWindow):
 
@@ -45,6 +46,7 @@ class MainWindowClass(QMainWindow, TestAppMainWindow.Ui_TestAppMainWindow):
         self.connect(self.startTrainingDataGenerationPushButton, SIGNAL("clicked()"),
                      self.start_training_data_generation)
         self.connect(self.deleteDatabasePushButton, SIGNAL("clicked()"), self.delete_database)
+        self.connect(self.clearRestPushButton, SIGNAL("clicked()"), self.clear_rest)
 
     def start_stop_logging(self):
         if self.logging_timer.isActive():
@@ -65,6 +67,10 @@ class MainWindowClass(QMainWindow, TestAppMainWindow.Ui_TestAppMainWindow):
         self.plainTextEdit.setPlainText(info)
 
     def refresh_timer_cb(self):
+        """
+        Refresh the GUI.
+        :return:
+        """
         if self.db:
             if self.db.is_connected():
                 self.connectionActiveLabel.setStyleSheet("QLabel { background-color : green}")
@@ -84,6 +90,11 @@ class MainWindowClass(QMainWindow, TestAppMainWindow.Ui_TestAppMainWindow):
     def delete_database(self):
         info = self.db.clear_table('data')
         self.plainTextEdit.setPlainText(info)
+
+    def clear_rest(self):
+        rest_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'REST', 'mysite', 'manage.py')
+        run_rest_cmd = 'python ' + rest_path + ' flush --no-input'
+        os.system(run_rest_cmd)
 
     def action_open_new_database(self):
         """
@@ -106,7 +117,6 @@ class MainWindowClass(QMainWindow, TestAppMainWindow.Ui_TestAppMainWindow):
 
             self.db.connect(database_name, user_name, host_name, password)
         if not self.db.is_connected():
-            self.connectionActiveLabel.setStyleSheet("QLabel { background-color : red}")
             string = ("Datenbankverbindung hergestellt: Host = {}, Database = {}".format(host_name, database_name))
             self.plainTextEdit.setPlainText(string)
             # sys.exit(1)

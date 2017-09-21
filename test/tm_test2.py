@@ -127,12 +127,10 @@ plt.show()
 
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy import interpolate
 
 
 x = x_soll # np.arange(0, 2*np.pi+np.pi/4, 2*np.pi/8)
 y = y_soll # np.sin(x)
-tck = interpolate.splrep(x, y, s=0)
 
 plt.figure()
 plt.plot(x, y, 'r')

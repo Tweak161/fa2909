@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from math import sqrt
 
+NUM_FEATURES = 4
 
 class Generator(object):
     """
@@ -156,17 +157,12 @@ class Generator(object):
         m = f/rise_time       # slope
 
         for x in x_soll:
-            print("x_soll = {}".format(x))
             if x <= rise_time:                          # rising speed
-                print("x <= rise_time = {}".format(rise_time))
                 y_soll_val = m * x
-                print('!!!!! y_soll_val = {}, m = {}, x = {}'.format(y_soll_val, m, x))
             elif rise_time < x <= constant_time:         # constant speed
                 y_soll_val = m*rise_time
             else:                     # no speed > finished
-                print('else:')
                 y_soll_val = 0
-            print("### y_soll_val = {}".format(y_soll_val))
             y_soll.append(y_soll_val)
         x_ist = list(range(0, 1500, 10))     # Sample Periode 10ms
         y_ist = []
@@ -206,7 +202,7 @@ class Generator(object):
         force = self._generate_force()
         speed = self._generate_speed()
         temperature = self._generate_temperature()
-        generated_data['Classification'] = None                 # Only training data has classifikation
+        generated_data['Classification'] = "NAN"                 # Only training data has classification
         generated_data.update(force)
         generated_data.update(speed)
         generated_data.update(temperature)
@@ -233,41 +229,55 @@ class Generator(object):
                             Classification:     (int)
                         }
         """
-        # Classify generated data
-        classification = -1
+        generated_data = self.generate_data()
+        classification_score = self._calc_classification_value(generated_data, 'ForceSoll', 'ForceIst')
+        classification_score += self._calc_classification_value(generated_data, 'SpeedSoll', 'SpeedIst')
+        classification_score += self._calc_classification_value(generated_data, 'TemperatureSoll', 'TemperatureIst')
 
-        # Calculate Gaussian Distribution of RMSE for 100 generated datasets
-        rmse_distribution = []
-        for i in range(1, 100):
-            rmse_sum = 0
-            generated_data = self.generate_data()
-            force_soll = generated_data['ForceSoll']['Y']
-            force_ist = generated_data['ForceIst']['Y']
-            for index, force_s in enumerate(force_soll):
-                rmse_sum = rmse_sum + sqrt((force_soll[1] - force_ist[1]) ** 2)
-            rmse = rmse_sum / len(force_soll)
-            rmse_distribution.append(rmse)
-        rmse_distribution_std = np.std(rmse_distribution)
-        rmse_distribution_mean = np.mean(rmse_distribution)
-
-        # Calculate RMSE force
-        rmse_sum = 0
-        force_soll = generated_data['ForceSoll']['Y']
-        rmse = rmse_sum / len(force_soll)
-
-        if (rmse_distribution_mean + 1.5 * rmse_distribution_std) < abs(rmse):
-            classification = 3      # Bad Quality > quality class 3
-        elif (rmse_distribution_mean + 1 * rmse_distribution_std) < abs(rmse):
-            classification = 2      # Mediocre Quality > quality class 2
+        if classification_score <= 3:
+            classification = 1
+        elif classification_score <= 6:
+            classification = 2
         else:
-            classification = 1      # Good Quality > quality class 1
+            classification = 3
 
         # Add classification to generated data
+        print("Classification = {}".format(classification))
         generated_data['Classification'] = classification
 
         return generated_data
 
         pass
+
+    def _calc_classification_value(self, generated_data, curve_ist, curve_soll):
+        # Calculate Gaussian Distribution of RMSE for 100 generated datasets
+        rmse_distribution = []
+        for i in range(1, 100):
+            rmse_sum = 0
+            force_soll = generated_data[curve_ist]['Y']
+            force_ist = generated_data[curve_soll]['Y']
+            for index, force_s in enumerate(force_soll):
+                rmse_sum = rmse_sum + sqrt((force_soll[index] - force_ist[index]) ** 2)
+            rmse = rmse_sum / len(force_soll)
+            rmse_distribution.append(rmse)
+        rmse_distribution_std = np.std(rmse_distribution)
+        rmse_distribution_mean = np.mean(rmse_distribution)
+
+        if (rmse_distribution_mean + 0.75 * rmse_distribution_std) < abs(rmse):
+            classification = 4  # Bad Quality > quality class 3
+        elif (rmse_distribution_mean + 0.5 * rmse_distribution_std) < abs(rmse):
+            classification = 2  # Mediocre Quality > quality class 2
+        else:
+            classification = 1  # Good Quality > quality class 1
+
+        # Add classification to generated data
+        generated_data['Classification'] = classification
+
+        print("... mean = {}, std = {}, rmse = {}, classification = {}".format(rmse_distribution_mean,
+                                                                               rmse_distribution_std,
+                                                                               rmse,
+                                                                               classification))
+        return classification
 
     def plot_generated_data(self):
         """
@@ -276,11 +286,8 @@ class Generator(object):
         """
 
         training_data = self.generate_training_data()
-        print('Generated training_data[Classification] = {}'.format(training_data['Classification']))
         training_data = self.generate_training_data()
-        print('Generated training_data[Classification] = {}'.format(training_data['Classification']))
         test_data = self.generate_test_data()
-        print("test_data = {}".format(test_data))
 
         # Plot1: Force
         fig = plt.figure(1)
