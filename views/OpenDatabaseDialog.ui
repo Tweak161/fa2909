@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>300</width>
+    <width>350</width>
     <height>200</height>
    </rect>
   </property>
@@ -18,18 +18,18 @@
   </property>
   <property name="minimumSize">
    <size>
-    <width>300</width>
+    <width>350</width>
     <height>200</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
-    <width>300</width>
-    <height>200</height>
+    <width>350</width>
+    <height>210</height>
    </size>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>Datenbankverbindung Herstellen</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <item>

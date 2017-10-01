@@ -242,7 +242,6 @@ class Generator(object):
             classification = 3
 
         # Add classification to generated data
-        print("Classification = {}".format(classification))
         generated_data['Classification'] = classification
 
         return generated_data
@@ -273,10 +272,6 @@ class Generator(object):
         # Add classification to generated data
         generated_data['Classification'] = classification
 
-        print("... mean = {}, std = {}, rmse = {}, classification = {}".format(rmse_distribution_mean,
-                                                                               rmse_distribution_std,
-                                                                               rmse,
-                                                                               classification))
         return classification
 
     def plot_generated_data(self):

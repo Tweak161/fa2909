@@ -37,10 +37,8 @@ class Algorithm(object):
         self.auto_config = autoconfig
 
     def set_data(self, data):
-        print("parameter data in Algorithms.py: {}".format(data))
         self.data_component1 = data
         self.calculate()
-        print("Set new data in Algorithm Instance: {}".format(self))
 
     def calculate(self):
         """
@@ -154,12 +152,10 @@ class KNeighborsClassifier(Cluster):
         X_transformed = MinMaxScaler().fit_transform(X_broken)
         estimator = KNeighborsClassifier()
         transformed_scores = cross_val_score(estimator, X_transformed, self.Y, scoring='accuracy')
-        print("The average accuracy for is {0: .1f} % ".format(np.mean(transformed_scores) * 100))
 
         # Create a pipeline
         scaling_pipeline = Pipeline([('scale', MinMaxScaler()), ('predict', KNeighborsClassifier())])
         scores = cross_val_score(scaling_pipeline, X_broken, self.Y, scoring='accuracy')
-        print("The pipeline scored an average accuracy for is {0:.1f}%".format(np.mean(transformed_scores) * 100))
 
     def get_configuration_info(self):
         """

@@ -16,10 +16,6 @@ class Controller(Qt.QDialog,KNeighborsClassifierDialog.Ui_KNeighborsClassifierDi
         self.setupUi(self)
         self.kNeighborsClassifier = None
         self.distance_measure = None
-        self.max_iterations = None
-        self.num_clusters = None
-        self.speed = None
-        self.cross_validation = None
 
         # ###################################################################################################################
         # Populate GUI

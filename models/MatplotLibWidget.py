@@ -41,7 +41,6 @@ class DynamicMplCanvas(MplCanvas):
         self._update_figure()
 
     def _update_figure(self):
-        print("update_figure()")
         # self.sca.set_visible(False)
         # self.sca = self.axes.scatter([random.randint(0, 10000), random.randint(0, 10000), random.randint(0, 10000)],
         #                              [random.randint(0, 10000), random.randint(0, 10000), random.randint(0, 10000)])
@@ -54,7 +53,6 @@ class DynamicMplCanvas(MplCanvas):
         prediction = []
         for sample in self.data:
             features = sample["Features"]
-            print("features = {}".format(features))
             f1.append(features[0])
             f2.append(features[1])
             f3.append(features[2])
@@ -64,11 +62,6 @@ class DynamicMplCanvas(MplCanvas):
                 prediction.append('r')
             if sample["Prediction"] == 3:
                 prediction.append('b')
-
-        print("Update Figure")
-        print("f1 = {}".format(f1))
-        print("f2 = {}".format(f2))
-        print("f3 = {}".format(f3))
 
         self.sca.set_visible(False)
         self.sca = self.axes.scatter(f1, f2, f3, c=prediction)

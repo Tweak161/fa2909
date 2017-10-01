@@ -9,6 +9,7 @@ from PyQt4.QtSql import *
 
 from models.DatabaseTest import DatabaseConnection
 import os
+from models import Generator
 
 class MainWindowClass(QMainWindow, TestAppMainWindow.Ui_TestAppMainWindow):
 
@@ -16,6 +17,7 @@ class MainWindowClass(QMainWindow, TestAppMainWindow.Ui_TestAppMainWindow):
         super(MainWindowClass, self).__init__()
         self.setupUi(self)
         self.db = DatabaseConnection()
+        self.generator = Generator.Generator()
 
         # #############################################################################################################
         # Initialize Timers
@@ -47,6 +49,7 @@ class MainWindowClass(QMainWindow, TestAppMainWindow.Ui_TestAppMainWindow):
                      self.start_training_data_generation)
         self.connect(self.deleteDatabasePushButton, SIGNAL("clicked()"), self.delete_database)
         self.connect(self.clearRestPushButton, SIGNAL("clicked()"), self.clear_rest)
+        self.connect(self.plotPushButton, SIGNAL("clicked()"), self.plot_trainings_data)
 
     def start_stop_logging(self):
         if self.logging_timer.isActive():
@@ -125,3 +128,10 @@ class MainWindowClass(QMainWindow, TestAppMainWindow.Ui_TestAppMainWindow):
             string = ("Datenbankverbindung hergestellt: Host = {}, Database = {}".format(host_name, database_name))
             self.plainTextEdit.setPlainText(string)
             self.connectionActiveLabel.setStyleSheet("QLabel { background-color : green}")
+
+    def plot_trainings_data(self):
+        """
+        aa
+        :return:
+        """
+        self.generator.plot_generated_data()

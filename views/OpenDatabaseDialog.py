@@ -25,14 +25,14 @@ except AttributeError:
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
         Dialog.setObjectName(_fromUtf8("Dialog"))
-        Dialog.resize(300, 200)
+        Dialog.resize(350, 200)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(Dialog.sizePolicy().hasHeightForWidth())
         Dialog.setSizePolicy(sizePolicy)
-        Dialog.setMinimumSize(QtCore.QSize(300, 200))
-        Dialog.setMaximumSize(QtCore.QSize(300, 200))
+        Dialog.setMinimumSize(QtCore.QSize(350, 200))
+        Dialog.setMaximumSize(QtCore.QSize(350, 210))
         self.verticalLayout_2 = QtGui.QVBoxLayout(Dialog)
         self.verticalLayout_2.setObjectName(_fromUtf8("verticalLayout_2"))
         self.verticalLayout = QtGui.QVBoxLayout()
@@ -90,7 +90,7 @@ class Ui_Dialog(object):
         QtCore.QMetaObject.connectSlotsByName(Dialog)
 
     def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(_translate("Dialog", "Dialog", None))
+        Dialog.setWindowTitle(_translate("Dialog", "Datenbankverbindung Herstellen", None))
         self.label_4.setText(_translate("Dialog", "Verbindung mit Datenbasis", None))
         self.label.setText(_translate("Dialog", "&Host", None))
         self.label_2.setText(_translate("Dialog", "&Datebank", None))

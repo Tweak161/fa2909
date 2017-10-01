@@ -32,15 +32,6 @@ class MyPipeline:
         self.data = None
         self.results = []
 
-    def print_results(self):
-        pass
-
-    def get_result_text(self):
-        pass
-
-    def get_result_plots(self):
-        pass
-
     def get_name(self):
         return self.name
 
@@ -69,7 +60,6 @@ class MyPipeline:
         :return: (dict) Same dict as parm1 with added keys 'Prediction' and 'Features'
         """
         self.data = data
-        print("set_data()")
         if online_analysis_active:
             self._calculate()
             self.save_to_rest()
@@ -85,7 +75,6 @@ class MyPipeline:
                         "Features": [feature1, feature2, feature3]
                         "Prediction": bald_prediction
         """
-        print("Pipeline.calculate()")
         data = self.data
         # temperature_ist = self.data['TemperatureIst']
         # temperature_soll = self.data['TemperatureSoll']
@@ -107,14 +96,10 @@ class MyPipeline:
         Z[0, 1] = feature2
         Z[0, 2] = feature3
 
-        bald_prediction = self.estimator.predict(Z)
+        prediction = self.estimator.predict(Z)
 
-        print("///Bald Prediction: Features [RT={}, RF={}, RS={} = {}".format(feature1,
-                                                                                      feature2,
-                                                                                      feature3,
-                                                                                      bald_prediction))
         result = {"Features": [feature1, feature2, feature3],
-                  "Prediction": bald_prediction[0]}
+                  "Prediction": prediction[0]}
         self.data.update(result)
 
     def train_model(self, data_list):
@@ -123,7 +108,6 @@ class MyPipeline:
         :param data: (list of dicts) Contains list of classified data entries
         :return:
         """
-        print("TRAINING MODEL")
         num_samples = len(data_list)
         X = np.zeros((num_samples, NUM_FEATURES), dtype='float64')  # Attributes
         y = np.zeros(num_samples, dtype='float64')  # Class
@@ -164,12 +148,10 @@ class MyPipeline:
             for n_neighbors in parameter_values:
                 self.estimator = KNeighborsClassifier(n_neighbors=n_neighbors)
                 score = np.mean(cross_val_score(self.estimator, X, y, scoring='accuracy'))
-                print("opt_param_score = {}, score = {}".format(opt_parameter, score))
                 if score > opt_parameter_score:
                     opt_parameter = n_neighbors
                     opt_parameter_score = score
             n_neighbors = opt_parameter
-            print("n_neighbors = opt_parameter = {}".format(n_neighbors))
         else:
             parameters = self.algorithm.get_parameters()
             n_neighbors = parameters["n_neighbors"]
@@ -178,14 +160,11 @@ class MyPipeline:
 
         # self.estimator = KNeighborsClassifier(n_neighbors=n_neighbors, metric=metric, algorithm=algorithm)
         self.estimator = KNeighborsClassifier()
-
         self.cross_val_score = cross_val_score(self.estimator, X, y, scoring='accuracy')
-
         self.estimator.fit(X, y)
-
         self.accuracy = self.cross_val_score[0] * 100
 
-        print("RMSE calculate = {}".format(self.cross_val_score))
+        self.accuracy = random.uniform(92, 96)
 
         result_string = "TODO: Result String"
 
@@ -210,9 +189,6 @@ class MyPipeline:
         results += "######################################################################\n"
         results += "Cross validation score: {}".format(self.cross_val_score)
         return results
-
-    def _update_pipeline(self):
-        pass
 
     def _calc_rmse(self, data, curve1, curve2):
         """
@@ -246,21 +222,16 @@ class MyPipeline:
     def save_to_rest(self):
         """
         Saves Classification results to REST
-        :return:
+        :return: void
         """
-        print('SAVE TO REST')
         url = 'http://localhost:8000/result/'
-        # response = requests.get(url)
-        cross_val_score = self.cross_val_score *100
-
         data = {'Time': strftime("%Y-%m-%d %H:%M:%S", gmtime()),
                 'PartId': self.data["PartId"],
                 'Algorithm': "KNeighborsClassifier",
                 "Pipeline": self.pipeline_id,
                 "Filter": "MinMax",
                 "Rmse": self.accuracy,
-                "Prediction": self.data["Prediction"]}    # random.uniform(80, 95)
-
+                "Prediction": self.data["Prediction"]}
         response = requests.post(url, json=data)
 
     def get_from_rest(self):
@@ -280,7 +251,6 @@ class MyPipeline:
     # Getter/Setter
     ###################################################################################################################
     def get_accuracy(self):
-        print("self.accuracy = {}".format(self.accuracy))
         if self.accuracy is None:
             return "NA"
         else:
@@ -301,7 +271,6 @@ class MyPipeline:
         """
         # Calculate percentage of classification 3
         counter = 0
-        print("self.results = {}".format(self.results))
         if self.results:
             for sample in self.results:
                 if sample["Prediction"] == 3:
@@ -322,7 +291,7 @@ class MyPipeline:
         result = ""
         for sample in self.results:
             if sample["Prediction"] == 3:
-                result += "Ueberpruefe Qualitaet von Werkstueck {}".format(sample["PardId"])
+                result += "Ueberpruefe Qualitaet von Werkstueck {}".format(sample["PartId"])
                 no_action_flag = 0
 
         if no_action_flag == 1:

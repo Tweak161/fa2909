@@ -45,26 +45,17 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         self.irisDataModel = QSqlTableModel(self)
         self.databaseTableView.setModel(self.irisDataModel)
         self.selected_table_name = None
-        self.selected_distance_measure = None
-        self.num_rows = None
-        self.num_columns = None
-        self.db_data = None
-        self.attributes = None
-        self.columns = None
         self.simpleKMeans = None
-        self.applied_algorithms = []            # Replace with self.pipelines
-        self.selected_filter_list = []
-        self.selected_filter = None
+        # self.applied_algorithms = []            # Replace with self.pipelines
         self.selected_algorithm_object = None
         self.pipelines = []
         self.selected_pipeline_nr = None
         self.selected_pipeline_object = None
         self.selected_algorithm_name = None
         self.selected_filter_name = None
-        self.selected_workpiece = None
-        self.selected_data = None
         self.selected_id = None
         self.online_analysis_active = False
+        self.applied_algorithms = []
 
         # #############################################################################################################
         # Initialize Timers
@@ -74,7 +65,7 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         self.process_data_timer.start(500)              # 500ms
 
         self.update_gui_timer = QTimer(self)
-        self.process_data_timer.timeout.connect(self.update_ui)
+        self.process_data_timer.timeout.connect(self.update_ui_timer_cb)
         self.process_data_timer.start(500)
 
         # #############################################################################################################
@@ -98,37 +89,38 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         self.configureFilterDialog.ui = ConfigureFilterDialog.Ui_ConfigureFilterDialog()
         self.configureFilterDialog.ui.setupUi(self.configureFilterDialog)
 
-        # ###################################################################################################################
+        # #############################################################################################################
         # Signals
-        # ###################################################################################################################
+        # #############################################################################################################
         # QAction
-        self.connect(self.actionOpenNewDatabase, SIGNAL("triggered()"), self.action_open_new_database_callback)
+        self.connect(self.actionOpenNewDatabase, SIGNAL("triggered()"), self.action_open_new_database_cb)
         self.connect(self.actionQuit, SIGNAL("triggered()"), self.close)
-        self.connect(self.actionOnlineAnalysis, SIGNAL("triggered()"), self.action_online_analysis_callback)
+        self.connect(self.actionOnlineAnalysis, SIGNAL("triggered()"), self.action_online_analysis_cb)
 
         # QButton
-        self.connect(self.addEntryButton, SIGNAL("clicked()"), self.add_entry)
-        self.connect(self.deleteEntryButton, SIGNAL("clicked()"), self.delete_entry)
-        self.connect(self.algoConfigButton, SIGNAL("clicked()"), self.configure_algo)
-        self.connect(self.applyAlgoButton, SIGNAL("clicked()"), self.apply_pipeline)
-        self.connect(self.configureFilterButton, SIGNAL("clicked()"), self.configure_filter)
-        self.connect(self.connectToDatabasePushButton, SIGNAL("clicked()"), self.action_open_new_database_callback)
-        self.connect(self.addFilterButton, SIGNAL("clicked()"), self.add_filter)
-        self.connect(self.deletePipelineButton, SIGNAL("clicked()"), self.delete_pipeline)
-        self.connect(self.startRestPushButton, SIGNAL("clicked()"), self.start_rest)
-        self.connect(self.refreshTableButton, SIGNAL("clicked()"), self.refresh_table)
+        self.connect(self.addEntryButton, SIGNAL("clicked()"), self.add_entry_cb)
+        self.connect(self.deleteEntryButton, SIGNAL("clicked()"), self.delete_entry_cb)
+        self.connect(self.algoConfigButton, SIGNAL("clicked()"), self.configure_algo_cb)
+        self.connect(self.applyAlgoButton, SIGNAL("clicked()"), self.apply_pipeline_cb)
+        self.connect(self.configureFilterButton, SIGNAL("clicked()"), self.configure_filter_cb)
+        self.connect(self.connectToDatabasePushButton, SIGNAL("clicked()"), self.action_open_new_database_cb)
+        self.connect(self.addFilterButton, SIGNAL("clicked()"), self.add_filter_cb)
+        self.connect(self.deletePipelineButton, SIGNAL("clicked()"), self.delete_pipeline_cb)
+        self.connect(self.startRestPushButton, SIGNAL("clicked()"), self.start_rest_cb)
+        self.connect(self.refreshTableButton, SIGNAL("clicked()"), self.populate_table_view_cb)
 
         # QTableWidget
         self.connect(self.appliedFilterTableWidget, SIGNAL("itemSelectionChanged()"),
                      self.filter_selection_cb)
         self.connect(self.pipelinesTableWidget, SIGNAL("itemSelectionChanged()"),
                      self.pipeline_selection_cb)
-        self.connect(self.databaseTableView.selectionModel(), SIGNAL("selectionChanged(QItemSelection, QItemSelection)"), self.id_selection_cb)
+        self.connect(self.databaseTableView.selectionModel(),
+                     SIGNAL("selectionChanged(QItemSelection, QItemSelection)"), self.id_selection_cb)
 
         # QComboBox
         # self.connect(self.workpieceSelectionComboBox, SIGNAL("currentIndexChanged(int)"), self.populate_table_view)
         self.connect(self.chooseAlgoComboBox, SIGNAL("currentIndexChanged(int)"), self.set_algo)
-        self.connect(self.choseFilterComboBox, SIGNAL("currentIndexChanged(int)"), self.select_filter)
+        self.connect(self.choseFilterComboBox, SIGNAL("currentIndexChanged(int)"), self.select_filter_cb)
 
 
         # #############################################################################################################
@@ -140,7 +132,7 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
     # #################################################################################################################
     # Static/Internal Functions
     # #################################################################################################################
-    def print_filter_selection(self, index):
+    def _print_filter_selection(self, index):
         """
         Function prints parameters for the filter selected in the "appliedFilterTableWidget" in the "Analyse" Tab
         :param index:
@@ -154,6 +146,7 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         # algorithm_result += '\n'
         # algorithm_result += algorithm.get_result()
         # self.algoResultsTextEdit.setPlainText(algorithm_result)
+
     def _update_pipeline_info(self):
         if self.selected_pipeline_nr:
             index = self.selected_pipeline_nr
@@ -162,6 +155,20 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
             pipeline_info_str += '\n'
             pipeline_info_str += selected_pipeline.get_result_info()
             self.pipelineInfoTextEdit.setPlainText(pipeline_info_str)        # Set pipelineInfoTextEdit
+
+    # def _update_algo_table(self):
+    #     if self.applied_algorithms:
+    #         for index, algorithm in enumerate(self.pipelines):
+    #             self.pipelinesTableWidget.setColumnCount(1)
+    #             self.pipelinesTableWidget.setRowCount(len(self.pipelines))
+    #
+    #             item = QTableWidgetItem()
+    #             item.setText(algorithm.get_name())
+    #             item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+    #             self.pipelinesTableWidget.setItem(index, 0, item)
+    #             self.pipelinesTableWidget.resizeColumnsToContents()
+    #             self.pipelinesTableWidget.setHorizontalHeaderLabels(QStringList('Pipeline'))
+    #             self.pipelinesTableWidget.horizontalHeader().setStretchLastSection(True)
 
     def _update_algo_table(self):
         if self.applied_algorithms:
@@ -195,10 +202,7 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
     # #################################################################################################################
     # Callbacks
     # #################################################################################################################
-    def refresh_table(self):
-        self.populate_table_view()
-
-    def start_rest(self):
+    def start_rest_cb(self):
         self.restServerActiveLabel.setStyleSheet("QLabel { background-color : green}")
         thread = Thread(target=rest_thread, args=(10,))
         try:
@@ -207,7 +211,7 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
             sys.exit()
         # os.system("python ../REST/mysite/manage.py runserver")
 
-    def update_ui(self):
+    def update_ui_timer_cb(self):
         """
         Updates gui cyclically
         :return:
@@ -225,7 +229,6 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
 
             # Plot Classification "Auswertung" > "Plot"
             pipeline_results = self.selected_pipeline_object.get_results()
-            print("rest_response = {}".format(pipeline_results))
             self.plot1.set_data(pipeline_results)
 
             # Print Report
@@ -247,17 +250,17 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
 
             # Classify
             # Query new data from database and pass it to pipeline for processing
-            data_list = self.db.get_unprocessed_data2()
+            data_list = self.db.get_unprocessed_data()
 
             for pipeline in self.pipelines:
                 for data in data_list:
                     pipeline.set_data(data, self.online_analysis_active)
 
-    def select_filter(self):
+    def select_filter_cb(self):
         pass
         self.selected_filter_name = self.choseFilterComboBox.currentText()
 
-    def add_filter(self):
+    def add_filter_cb(self):
         """
 
         :return:
@@ -268,13 +271,13 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
             if self.selected_filter_name == "MinMaxFilter":
                 new_filter = Filter.MinMaxFilter()
                 self.selected_filter = new_filter
-                self.selected_pipeline_object.add_filter(new_filter)
+                self.selected_pipeline_object.add_filter_cb(new_filter)
 
                 self._update_filter_table()
 
         self._update_pipeline_info()
 
-    def delete_pipeline(self):
+    def delete_pipeline_cb(self):
         pass
         # Get selected Row
         selected_row = self.pipelinesTableWidget.currentRow()
@@ -314,7 +317,7 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         if not qmodel_index.isValid():
             return
         index = qmodel_index.row()
-        self.print_filter_selection(index)
+        self._print_filter_selection(index)
 
     def pipeline_selection_cb(self):
         """
@@ -340,7 +343,7 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         pipeline_info_str += selected_pipeline.get_result_info()
         self.pipelineInfoTextEdit.setPlainText(pipeline_info_str)        # Set pipelineInfoTextEdit
 
-    def configure_filter(self):
+    def configure_filter_cb(self):
         """
         This Callback function gets triggered when user clicks the "Konfiguration" button for the filter configuration
         in the Analysis Tab.
@@ -349,7 +352,7 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         if self.configureFilterDialog.exec_():
             pass
 
-    def apply_pipeline(self):
+    def apply_pipeline_cb(self):
         """
         This Callback function gets triggered when user clicks the "Hinzufuegen" Button in the "Analyse" Tab
         :return:
@@ -357,7 +360,6 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         # Create new pipeline
         new_pipeline = MyPipeline(self.selected_algorithm_object)
         self.pipelines.append(new_pipeline)
-
 
         # Output to console
         # output = self.simpleKMeans.get_algorithm_parameters()
@@ -374,14 +376,15 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         if self.selected_pipeline_nr is None:
             self.selected_pipeline_nr = 0
         else:
-            self.selected_pipeline_nr = len(self.pipelines)-1
+            self.selected_pipeline_nr = len(self.pipelines) - 1
         self.pipelinesTableWidget.selectRow(self.selected_pipeline_nr)
+
         self._update_pipeline_info()
 
-    def action_online_analysis_callback(self):
+    def action_online_analysis_cb(self):
         self.online_analysis_active = not self.online_analysis_active
 
-    def action_open_new_database_callback(self):
+    def action_open_new_database_cb(self):
         """
         This Callback function gets triggered when user executes the newDatabase-Action.
         This can happen either through the Menu, the Toolbar or the Hotkey "Strg + N".
@@ -419,9 +422,9 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
             # for tableEntry in self.db.get_tables():
             #     self.tableSelectionComboBox.addItem(tableEntry)
 
-        self.populate_table_view()
+        self.populate_table_view_cb()
 
-    def populate_table_view(self):
+    def populate_table_view_cb(self):
         """
         This function populates the tabeleView in the the Datenintegration Window with the database data.
         :return:
@@ -447,18 +450,9 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         self.databaseTableView.setSelectionBehavior(QTableView.SelectRows)
         self.databaseTableView.resizeColumnsToContents()
 
-        self.extract_data()
         self.setup_dialoges()
 
-    def extract_data(self):
-        """
-        Get data from selected data entry and save it to memory
-        :return:
-        """
-        # Update number of Rows and Columns. Safe DB Content to memory
-        # self.selected_data = self.db.get_data(self.selected_id)
-
-    def add_entry(self):
+    def add_entry_cb(self):
         """
         This Function is a callback to addButton.
         It adds an Entry to the database
@@ -477,7 +471,7 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         QSqlDatabase.database().commit()
         self.databaseTableView.edit(index)
 
-    def delete_entry(self):
+    def delete_entry_cb(self):
         """
         Callback Function
         This callback is triggered by clicking "Delete Entry" Button
@@ -492,7 +486,7 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         self.irisDataModel.removeRow(index.row())
         self.irisDataModel.submitAll()
 
-    def configure_algo(self):
+    def configure_algo_cb(self):
         """
         Callback Function.
         This Function is executed, when the "Konfiguration" Button is clicked.
@@ -524,7 +518,6 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
     ###################################################################################################################
     # Set Functions
     ###################################################################################################################
-
     def set_algo(self, index):
         """
         Callback Function.
@@ -543,7 +536,6 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
 
 
 def rest_thread(arg):
-    print("Start Rest Server...")
     rest_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'REST', 'mysite', 'manage.py')
     run_rest_cmd = 'python ' + rest_path + ' runserver'
     os.system(run_rest_cmd)
