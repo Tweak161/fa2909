@@ -1,137 +1,181 @@
 from PyQt4.QtSql import *
+import psycopg2
 import ast
+import psycopg2 as p
 
 
-class DatabaseConnection(QSqlDatabase):
+class DatabaseConnection(object):
     def __init__(self):
-        super(QSqlDatabase, self).__init__()
-        QSqlDatabase.addDatabase("QPSQL")
-        self.connection = self.addDatabase("QPSQL")
-        pass
+        super(DatabaseConnection, self).__init__()
+        self.seqnr_slam = 0
+        self.run = 1
+        self.car = 7000
+        self.connected = False
+        self.db_name = None
+        self.db_user = None
+        self.db_host = None
+        self.db_password = None
+        self.connection = None
+        self.cursor = None
 
     def is_connected(self):
         """
         Function returns database connection status.
         :return: (bool) Returns True if database connection is active and False otherwise.
         """
-        return self.connection.isOpen()
+        return self.connected
 
     def open(self, host_name, user_name, database_name, password):
-        self.connection.setHostName(host_name)
-        self.connection.setDatabaseName(database_name)
-        self.connection.setPassword(password)
-        self.connection.setUserName(user_name)
-        if self.connection.open():
+        try:
+            self.db_name = database_name
+            self.db_user = user_name
+            self.db_host = host_name
+            self.db_password = password
+            self.connection = p.connect("dbname ='{}' user='{}' host='{}' password='{}'".format(database_name,
+                                                                                                user_name,
+                                                                                                host_name,
+                                                                                                password))
+            print("Connection status: {}".format(self.connection))
+            print("Connection Status = {}".format(self.connection.status))
+            self.connected = True
+            self.connection.autocommit = True
+            self.cursor = self.connection.cursor()
             return True
-        else:
+
+        except:
+            print('Cannot connect to database')
+            self.connected = False
             return False
 
-    # def get_num_rows(self, selected_table_name):
-    #     pass
-    #     # Update number of Rows and Columns. Safe DB Content to memory
-    #     query = QSqlQuery()
-    #     query.setForwardOnly(True)
-    #     query.prepare("SELECT * FROM {}".format(selected_table_name))
-    #     query.exec_()
-    #     num_rows = query.size()
-    #
-    #     return num_rows
-    #
-    # def get_num_columns(self, selected_table_name):
-    #     pass
-    #     # Update number of Rows and Columns. Safe DB Content to memory
-    #     query = QSqlQuery()
-    #     query.setForwardOnly(True)
-    #     query.prepare("SELECT * FROM {}".format(selected_table_name))
-    #     query.exec_()
-    #     num_columns = query.record().count()
-    #
-    #     return num_columns
-
-    # def get_tables(self):
-    #     tables = self.connection.tables()
-    #     return tables
-
-    # def get_unprocessed_data(self):
-    #     """
-    #     Function returns list with all unprocessed database entries
-    #     :return: (list)
-    #     """
-    #
-    #     query = QSqlQuery()
-    #     query.setForwardOnly(True)
-    #     query.prepare("SELECT data FROM data WHERE processed = 'False'")
-    #     query.exec_()
-    #     data = []
-    #     while query.next():  # query successfully executed
-    #         data_str = str(query.value(0).toString())
-    #         # data_json = ast.literal_eval(data_str)
-    #         data.append(data_str)
-    #     return data
-
-    def get_data(self, uuid):
+    def get_data(self):
         """
         Returns data stored in database as dict instead of JSON
         :return: (dict): data as JSON. Returns 'None' in case of error
         """
-        # Update number of Rows and Columns. Safe DB Content to memory
-        query = QSqlQuery()
-        query.setForwardOnly(True)
-        query.prepare("SELECT data FROM data WHERE id = '{}'".format(uuid))
-        query.exec_()
-        data = None
-        if query.isActive():        # query successfully executed
-            query.next()
-            data_str = str(query.value(0).toString())
-            data_json = ast.literal_eval(data_str)
-
-        return data_json
-
+        query = "SELECT * FROM data"
+        self.cursor.execute(query)
+        # result = self.cursor.fetchall()
+        # Transform list of tuples of dicts into list of dicts
+        data = []
+        for index, record in enumerate(self.cursor):
+            column = list()
+            column.append(record[0])
+            column.append(record[1])
+            column.append(record[2])
+            column.append(record[3])
+            column.append(record[4])
+            column.append(record[5])
+            column.append(record[6])
+            data.append(column)
+        return data
 
     def get_unprocessed_data(self):
         """
         Function returns list with all unprocessed database entries
         :return: (list)
         """
+        query = "SELECT * FROM data WHERE processed = 'False'"
+        self.cursor.execute(query)
+        # result = self.cursor.fetchall()
+        # Transform list of tuples of dicts into list of dicts
+        data = []
+        for record in self.cursor:
 
-        query = QSqlQuery()
-        query.setForwardOnly(True)
-        query.prepare("SELECT * FROM data WHERE processed = 'False'")
-        query.exec_()
-        data_list = []
-        if query.isActive():        # query successfully executed
-            while query.next():
-                id = str(query.value(0).toString())  # id (uuid)
-                time = str(query.value(1).toString())  # time
-                part_id = str(query.value(2).toString())  # part_id
-                component_id = str(query.value(3).toString())  # component_id
-                processed = str(query.value(4).toString())  # processed
-                classified = str(query.value(5).toString())  # classified
-                data = str(query.value(6).toString())  # data
+            id = record[0]  # id (uuid)
+            time = record[1]  # time
+            part_id = record[2]  # part_id
+            component_id = record[3]  # component_id
+            processed = record[4]  # processed
+            classified = record[5]  # classified
+            data_record = record[6]  # data
 
-                data_json = ast.literal_eval(data)
-                data_json.update({"PartId": part_id})
-                data_list.append(data_json)
+            data_json = data_record
+            data_json.update({"PartId": part_id})
+            data.append(data_json)
 
         # Flag all data as processd
-        query.prepare("UPDATE data SET processed = 'True' WHERE processed = 'False'")
-        query.exec_()
-
-        return data_list
-
-    def get_training_data(self):
-        query = QSqlQuery()
-        query.setForwardOnly(True)
-        query.prepare("SELECT data FROM data WHERE classified = 'True'")
-        query.exec_()
-        data = []
-        if query.isActive():  # query successfully executed
-            while query.next():
-                data_str = str(query.value(0).toString())
-                data_json = ast.literal_eval(data_str)
-                data.append(data_json)
+        query = "UPDATE data SET processed = 'True' WHERE processed = 'False'"
+        self.cursor.execute(query)
 
         return data
+
+    def get_training_data(self):
+        """
+        Get all Database entries where classified = True
+        :return: (dict) All data entries and PartId
+        """
+        query = "SELECT * FROM data WHERE classified = 'True'"
+        self.cursor.execute(query)
+        # result = self.cursor.fetchall()
+        # Transform list of tuples of dicts into list of dicts
+        data = []
+        for record in self.cursor:
+            id = record[0]  # id (uuid)
+            time = record[1]  # time
+            part_id = record[2]  # part_id
+            component_id = record[3]  # component_id
+            processed = record[4]  # processed
+            classified = record[5]  # classified
+            data_record = record[6]  # data
+
+            data_json = data_record
+            data_json.update({"PartId": part_id})
+            data.append(data_json)
+        return data
+
+    def get_column_names(self):
+        """
+        Function returns list of column names
+        :return:
+        """
+        query = "SELECT * FROM data"
+        self.cursor.execute(query)
+        # result = self.cursor.fetchall()
+        # Transform list of tuples of dicts into list of dicts
+        header = []
+        for description in self.cursor.description:
+            header.append(description[0])
+        return header
+
+    def delete_entry(self, uuid):
+        """
+        Function deletes a database entry with given uuid
+        :param uuid: uuid of entry which should be deleted
+        :return:
+        """
+        query = "DELETE FROM data WHERE id = '{}'".format(uuid)
+        self.cursor.execute(query)
+
+    def delete_table_entries(self):
+        query = "DELETE FROM data"
+        self.cursor.execute(query)
+
+    def get_host_name(self):
+        return self.db_host
+
+    def get_db_name(self):
+        return self.db_name
+
+    def count_db_entries(self):
+        query = "SELECT COUNT(*) FROM data"
+        self.cursor.execute(query)
+        nr_db_entries = self.cursor.fetchone()
+        nr_db_entries = nr_db_entries[0]
+        return nr_db_entries
+
+    def count_training_data(self):
+        query = "SELECT COUNT(*) FROM data WHERE classified = 'True'"
+        self.cursor.execute(query)
+        nr_training_data = self.cursor.fetchone()
+        nr_training_data = nr_training_data[0]
+        return nr_training_data
+
+    def count_processed_data(self):
+        query = "SELECT COUNT(*) FROM data WHERE processed = 'True'"
+        self.cursor.execute(query)
+        nr_processed_data = self.cursor.fetchone()
+        nr_processed_data = nr_processed_data[0]
+        return nr_processed_data
 
 
 

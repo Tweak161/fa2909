@@ -10,6 +10,8 @@ from math import sqrt
 import uuid
 from time import gmtime, strftime
 
+import Filter
+
 
 NUM_FEATURES = 5
 
@@ -20,17 +22,20 @@ class MyPipeline:
         self.algorithm = algorithm
         self.filter_list = []
         self.name = self.algorithm.get_name()
-        self.pipeline = Pipeline([
-            ('filter', MinMaxScaler()),
-            ('algorithm', KNeighborsClassifier())
-        ])
+        # self.pipeline = Pipeline([
+        #     ('filter', MinMaxScaler()),
+        #     ('algorithm', KNeighborsClassifier())
+        # ])
+        self.pipeline = None
         self.auto_configuration = False
         self.cross_val_score = None
-        self.estimator = None
         self.accuracy = None
         self.pipeline_id = str(uuid.uuid4())
         self.data = None
         self.results = []
+
+        # Initialize pipeline
+        self._create_pipeline()
 
     def get_name(self):
         return self.name
@@ -42,12 +47,18 @@ class MyPipeline:
         return self.filter_list
 
     def add_filter(self, filter):
+        """
+        Function adds filter to pipeline's internal list of filters
+        :param filter: (Filter) Filter
+        :return:
+        """
         self.filter_list.append(filter)
+        self._create_pipeline()
 
     def remove_filter(self, index):
         """
-
-        :param filter: (int) Index of Object
+        Removes the filter with selected index from the pipeline
+        :param filter: (int) Row of Filter to be removed
         :return:
         """
         del self.filter_list[index]
@@ -84,6 +95,9 @@ class MyPipeline:
         # force_soll = self.data['ForceSoll']
         # classification = self.data['Classification']
 
+        ##############################################################################################################
+        # Feature Extraction
+        ##############################################################################################################
         # Calculate Feature1: RMSE Temperature
         feature1 = self._calc_rmse(data, 'TemperatureIst', 'TemperatureSoll')
         # Calculate Feature2: RMSE Force
@@ -96,10 +110,11 @@ class MyPipeline:
         Z[0, 1] = feature2
         Z[0, 2] = feature3
 
-        prediction = self.estimator.predict(Z)
+        prediction = self.pipeline.predict(Z)
 
         result = {"Features": [feature1, feature2, feature3],
                   "Prediction": prediction[0]}
+
         self.data.update(result)
 
     def train_model(self, data_list):
@@ -108,6 +123,7 @@ class MyPipeline:
         :param data: (list of dicts) Contains list of classified data entries
         :return:
         """
+        print("training model with {}".format(len(data_list)))
         num_samples = len(data_list)
         X = np.zeros((num_samples, NUM_FEATURES), dtype='float64')  # Attributes
         y = np.zeros(num_samples, dtype='float64')  # Class
@@ -116,6 +132,9 @@ class MyPipeline:
         feature3_list = []
         class_list = []
 
+        ##############################################################################################################
+        # Feature Extraction
+        ##############################################################################################################
         # Calculate Features
         for data in data_list:
             # Calculate Feature1: RMSE Temperature
@@ -140,45 +159,45 @@ class MyPipeline:
         # X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=14)
 
         if self.algorithm.auto_config_on():
-            pass
+            ('print > algorithm.auto_config_on()')
             # Determine parameter: n_neighbors
             parameter_values = list(range(1, 50))  # Include 20
             opt_parameter = parameter_values[0]
             opt_parameter_score = 0
             for n_neighbors in parameter_values:
-                self.estimator = KNeighborsClassifier(n_neighbors=n_neighbors)
-                score = np.mean(cross_val_score(self.estimator, X, y, scoring='accuracy'))
+                score = np.mean(cross_val_score(self.pipeline, X, y, scoring='accuracy'))
                 if score > opt_parameter_score:
                     opt_parameter = n_neighbors
                     opt_parameter_score = score
             n_neighbors = opt_parameter
+            print('n_neighbors = {}'.format(n_neighbors))
         else:
             parameters = self.algorithm.get_parameters()
             n_neighbors = parameters["n_neighbors"]
             metric = parameters["metric"]
             algorithm = parameters["algorithm"]
 
-        # self.estimator = KNeighborsClassifier(n_neighbors=n_neighbors, metric=metric, algorithm=algorithm)
-        self.estimator = KNeighborsClassifier()
-        self.cross_val_score = cross_val_score(self.estimator, X, y, scoring='accuracy')
-        self.estimator.fit(X, y)
+        self.cross_val_score = cross_val_score(self.pipeline, X, y, scoring='accuracy')
+        self.pipeline.fit(X, y)
         self.accuracy = self.cross_val_score[0] * 100
 
-        self.accuracy = random.uniform(92, 96)
+        # self.accuracy = random.uniform(92, 96)
 
         result_string = "TODO: Result String"
 
     def get_configuration_info(self):
         pass
+        print("get_configuration_info")
         info = "######################################################################\n"
         info += "Algorithmus \n"
         info += "######################################################################\n"
         info += self.algorithm.get_configuration_info()
         info += "\n"
+        if self.filter_list:
+            info += "Anzahl Filter = {}\n".format(len(self.filter_list))
         for filter_nr, filter in enumerate(self.filter_list):
             info += "######################################################################\n"
-            info += "Filter {} \n".format(filter_nr)
-            info += "######################################################################\n"
+            info += "Filter {}: \n".format(filter_nr+1)
             info += filter.get_configuration_info()
             info += "\n"
         return info
@@ -235,6 +254,10 @@ class MyPipeline:
         response = requests.post(url, json=data)
 
     def get_from_rest(self):
+        """
+        This function retrieves all Analysis Results saved on the REST Server and returns them as a dictionary
+        :return: (dict) Analysis Results from REST
+        """
         url = 'http://localhost:8000/result/'
         r = requests.get(url)
         if r.status_code == 200:        # Successfull request
@@ -283,8 +306,8 @@ class MyPipeline:
 
     def get_report(self):
         """
-
-        :return:
+        Function returns Analysis Report. This Report is Displayed in the "Auswertung" Tab in the "Bericht" Text Field
+        :return: (str) Formatted Analysis Report as String
         """
         pass
         no_action_flag = 1
@@ -298,4 +321,19 @@ class MyPipeline:
             result = "Keine Aktionen notwendig"
         return result
 
+    def _create_pipeline(self):
+        pass
+        pipeline_list = []
+        if self.filter_list:        # check if list is empty
 
+            for index, filter in enumerate(self.filter_list):
+                filter_name = 'filter{}'.format(index)
+                transformation = filter.get_transformation()
+                pipeline_list.append((filter_name, transformation))
+
+        estimator_name = self.algorithm.get_name()
+        estimator = self.algorithm.get_estimator()
+        estimator_tuple = (estimator_name, estimator)
+        pipeline_list.append(estimator_tuple)
+
+        self.pipeline = Pipeline(pipeline_list)

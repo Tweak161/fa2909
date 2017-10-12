@@ -61,10 +61,12 @@ class DatabaseConnection(object):
             self.connected = True
             self.connection.autocommit = True
             self.cursor = self.connection.cursor()
+            return True
 
         except:
             print('Cannot connect to database')
             self.connected = False
+            return False
 
     def is_connected(self):
         """

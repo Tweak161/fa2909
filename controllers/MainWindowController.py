@@ -1,18 +1,13 @@
 import sys  # Access command line
 import os
+import platform
 
-# Data Analysis
-import numpy as np
 # PyQt
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
-from PyQt4.QtSql import *
-import ast
 
 from threading import Thread
 
-
-from models.MatplotLibWidget import MplCanvas
 from models.MatplotLibWidget import DynamicMplCanvas
 
 # Views
@@ -21,19 +16,13 @@ from views import OpenDatabaseDialog
 
 # Controller
 from controllers import KNeighborsClassifierDialogController
+from controllers import MinMaxScalerDialogController
 
 # Models
 from models.Pipeline import MyPipeline
-from models import Filter
 from models.Database import DatabaseConnection
 
-# Spalten Indices
-# SEPAL_LENGTH = 0                              #   Umbenennen in   sepal_length
-# SEPAL_WIDTH = ASSETID = 1                   #                   sepal_width
-# PETAL_LENGTH = DATE = DESCRIPTION = 2       #                   petal_length
-# PETAL_WIDTH = ACTIONID = 3                 #                   petal_width
-# SPECIES = 4
-
+__version__ = "1.0"
 
 class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
 
@@ -42,20 +31,21 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         self.setupUi(self)
 
         self.db = DatabaseConnection()
-        self.irisDataModel = QSqlTableModel(self)
-        self.databaseTableView.setModel(self.irisDataModel)
         self.selected_table_name = None
-        self.simpleKMeans = None
-        # self.applied_algorithms = []            # Replace with self.pipelines
+        self.kNeighbor = None
+        self.minMaxFilter = None
         self.selected_algorithm_object = None
         self.pipelines = []
         self.selected_pipeline_nr = None
         self.selected_pipeline_object = None
         self.selected_algorithm_name = None
         self.selected_filter_name = None
+        self.selected_filter_object = None
         self.selected_id = None
         self.online_analysis_active = False
         self.applied_algorithms = []
+        self.selected_db_entry_uuid = None
+        self.filename = None
 
         # #############################################################################################################
         # Initialize Timers
@@ -78,16 +68,17 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         # #############################################################################################################
         # Initialize Dialogs
         # #############################################################################################################
-        self.simpleKMeansDialog = KNeighborsClassifierDialogController.Controller()
-        # self.simpleKMeansDialog.setupUi(self.simpleKMeansDialog)
+        self.kNeighborClassifierDialogController = KNeighborsClassifierDialogController.Controller()
 
-        self.openDatabaseDialog = QDialog()
-        self.openDatabaseDialog.ui = OpenDatabaseDialog.Ui_Dialog()
-        self.openDatabaseDialog.ui.setupUi(self.openDatabaseDialog)
+        self.minMaxScalerDialogController = MinMaxScalerDialogController.Controller()
 
         self.configureFilterDialog = QDialog()
         self.configureFilterDialog.ui = ConfigureFilterDialog.Ui_ConfigureFilterDialog()
         self.configureFilterDialog.ui.setupUi(self.configureFilterDialog)
+
+        self.openDatabaseDialog = QDialog()
+        self.openDatabaseDialog.ui = OpenDatabaseDialog.Ui_Dialog()
+        self.openDatabaseDialog.ui.setupUi(self.openDatabaseDialog)
 
         # #############################################################################################################
         # Signals
@@ -96,6 +87,10 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         self.connect(self.actionOpenNewDatabase, SIGNAL("triggered()"), self.action_open_new_database_cb)
         self.connect(self.actionQuit, SIGNAL("triggered()"), self.close)
         self.connect(self.actionOnlineAnalysis, SIGNAL("triggered()"), self.action_online_analysis_cb)
+        self.connect(self.actionHelpAbout, SIGNAL("triggered()"), self.action_help_about_cb)
+        self.connect(self.actionSaveFile, SIGNAL("triggered()"), self.action_save_cb)
+        self.connect(self.actionSaveFileAs, SIGNAL("triggered()"), self.action_save_as_cb)
+        self.connect(self.actionPrint, SIGNAL("triggered()"), self.action_print_cb)
 
         # QButton
         self.connect(self.addEntryButton, SIGNAL("clicked()"), self.add_entry_cb)
@@ -108,67 +103,32 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         self.connect(self.deletePipelineButton, SIGNAL("clicked()"), self.delete_pipeline_cb)
         self.connect(self.startRestPushButton, SIGNAL("clicked()"), self.start_rest_cb)
         self.connect(self.refreshTableButton, SIGNAL("clicked()"), self.populate_table_view_cb)
+        self.connect(self.deleteTableButton, SIGNAL("clicked()"), self.delete_table_cb)
+        self.connect(self.startStopAnalysisPushButton, SIGNAL("clicked()"), self.start_stop_analysis_cb)
 
         # QTableWidget
         self.connect(self.appliedFilterTableWidget, SIGNAL("itemSelectionChanged()"),
                      self.filter_selection_cb)
         self.connect(self.pipelinesTableWidget, SIGNAL("itemSelectionChanged()"),
                      self.pipeline_selection_cb)
-        self.connect(self.databaseTableView.selectionModel(),
-                     SIGNAL("selectionChanged(QItemSelection, QItemSelection)"), self.id_selection_cb)
+        self.connect(self.databaseTableWidget, SIGNAL("itemSelectionChanged()"),
+                     self.database_selection_cb)
 
         # QComboBox
-        # self.connect(self.workpieceSelectionComboBox, SIGNAL("currentIndexChanged(int)"), self.populate_table_view)
         self.connect(self.chooseAlgoComboBox, SIGNAL("currentIndexChanged(int)"), self.set_algo)
-        self.connect(self.choseFilterComboBox, SIGNAL("currentIndexChanged(int)"), self.select_filter_cb)
-
-
-        # #############################################################################################################
-        # Toolbar setup
-        # #############################################################################################################
-        # self.toolBar.addAction(newDatabaseAction)
-        # self.menuFile.addAction(newDatabaseAction)
+        self.connect(self.chooseFilterComboBox, SIGNAL("currentIndexChanged(int)"), self.select_filter_cb)
 
     # #################################################################################################################
     # Static/Internal Functions
     # #################################################################################################################
-    def _print_filter_selection(self, index):
-        """
-        Function prints parameters for the filter selected in the "appliedFilterTableWidget" in the "Analyse" Tab
-        :param index:
-        :return:
-        """
-        pass
-        # algorithm = self.applied_algorithms[index]
-        # algorithm_result = algorithm.get_algorithm_parameters()
-        # algorithm_result += '\n'
-        # algorithm_result += algorithm.get_filter_parameters()
-        # algorithm_result += '\n'
-        # algorithm_result += algorithm.get_result()
-        # self.algoResultsTextEdit.setPlainText(algorithm_result)
-
     def _update_pipeline_info(self):
-        if self.selected_pipeline_nr:
+        if self.selected_pipeline_nr is not None:
             index = self.selected_pipeline_nr
             selected_pipeline = self.pipelines[index]
             pipeline_info_str = selected_pipeline.get_configuration_info()
             pipeline_info_str += '\n'
             pipeline_info_str += selected_pipeline.get_result_info()
             self.pipelineInfoTextEdit.setPlainText(pipeline_info_str)        # Set pipelineInfoTextEdit
-
-    # def _update_algo_table(self):
-    #     if self.applied_algorithms:
-    #         for index, algorithm in enumerate(self.pipelines):
-    #             self.pipelinesTableWidget.setColumnCount(1)
-    #             self.pipelinesTableWidget.setRowCount(len(self.pipelines))
-    #
-    #             item = QTableWidgetItem()
-    #             item.setText(algorithm.get_name())
-    #             item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-    #             self.pipelinesTableWidget.setItem(index, 0, item)
-    #             self.pipelinesTableWidget.resizeColumnsToContents()
-    #             self.pipelinesTableWidget.setHorizontalHeaderLabels(QStringList('Pipeline'))
-    #             self.pipelinesTableWidget.horizontalHeader().setStretchLastSection(True)
 
     def _update_algo_table(self):
         if self.applied_algorithms:
@@ -209,7 +169,6 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
             thread.start()
         except (KeyboardInterrupt, SystemExit):
             sys.exit()
-        # os.system("python ../REST/mysite/manage.py runserver")
 
     def update_ui_timer_cb(self):
         """
@@ -235,6 +194,9 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
             report = self.selected_pipeline_object.get_report()
             self.reportTextEdit.setPlainText(report)
 
+            # Update Database Info Field
+            self.update_database_info()
+
     def process_data_timer_cb(self):
         """
         Callback Function. Executes each 500ms.
@@ -257,28 +219,28 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
                     pipeline.set_data(data, self.online_analysis_active)
 
     def select_filter_cb(self):
-        pass
-        self.selected_filter_name = self.choseFilterComboBox.currentText()
+        self.selected_filter_name = self.chooseFilterComboBox.currentText()
 
     def add_filter_cb(self):
         """
-
+        Adds configured Filter to the selected pipeline
         :return:
         """
-        pass
         self._update_filter_table()
         if self.selected_filter_name and self.selected_pipeline_object:
             if self.selected_filter_name == "MinMaxFilter":
-                new_filter = Filter.MinMaxFilter()
-                self.selected_filter = new_filter
-                self.selected_pipeline_object.add_filter_cb(new_filter)
+                new_filter = self.minMaxFilter
+            if self.selected_filter_name == "MeanFilter":
+                pass
+            self.selected_filter_object = new_filter
 
-                self._update_filter_table()
+            self.selected_pipeline_object.add_filter(new_filter)
 
-        self._update_pipeline_info()
+            self._update_filter_table()
+
+            self._update_pipeline_info()
 
     def delete_pipeline_cb(self):
-        pass
         # Get selected Row
         selected_row = self.pipelinesTableWidget.currentRow()
         if selected_row:
@@ -286,27 +248,6 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
             selected_item = self.pipelinesTableWidget.currentItem()
             self.pipelinesTableWidget.removeRow(selected_row)
             del self.pipelines[selected_row]
-
-    def id_selection_cb(self, index1, index2):
-        q_model_index_list = index1.indexes()       # list with QModelIndex Instances of each column for selected row
-        q_model_index_uuid = q_model_index_list[0]      # column uuid
-        self.selected_id = self.irisDataModel.data(q_model_index_uuid).toString()
-
-        ##############################################################################################################
-        # Update pipelines calculations
-        ##############################################################################################################
-        # Get data
-        q_model_index_data= q_model_index_list[4]
-        data = self.irisDataModel.data(q_model_index_data).toString()
-
-        data = self.db.get_data(self.selected_id)
-
-        # Set new data for all pipelines
-        for pipeline in self.pipelines:
-            pipeline.set_data(data, False)
-
-        # Pipline calculations changed > Update pipeline info
-        self._update_pipeline_info()
 
     def filter_selection_cb(self):
         """
@@ -317,7 +258,19 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         if not qmodel_index.isValid():
             return
         index = qmodel_index.row()
-        self._print_filter_selection(index)
+
+    def database_selection_cb(self):
+        """
+        Callback function is triggered, when user selects an entry "Angewandte Analyseverfahren" table under the
+        "Analyse" Tab
+        :return:
+        """
+        # self.algoResultsListTableWidget.select
+        qmodel_index = self.databaseTableWidget.currentIndex()        # currentIndex() returns QModelIndex
+        if not qmodel_index.isValid():
+            return
+        row = qmodel_index.row()
+        self.selected_db_entry_uuid = self.databaseTableWidget.item(row, 0).text()      # uuid
 
     def pipeline_selection_cb(self):
         """
@@ -325,7 +278,6 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         under the "Analyse" Tab.
         :return:
         """
-        # self.algoResultsListTableWidget.select
         qmodel_index = self.pipelinesTableWidget.currentIndex()        # currentIndex() returns QModelIndex
         if not qmodel_index.isValid():
             return
@@ -349,7 +301,13 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         in the Analysis Tab.
         :return:
         """
-        if self.configureFilterDialog.exec_():
+        # Create Dialog
+        if self.selected_filter_name == "MinMaxFilter":
+            if self.minMaxScalerDialogController.exec_():
+                self.minMaxFilter = self.minMaxScalerDialogController.get_filter()
+            if self.minMaxFilter:
+                self.selected_filter_object = self.minMaxFilter
+        if self.selected_filter_name == "MeanFilter":
             pass
 
     def apply_pipeline_cb(self):
@@ -361,20 +319,13 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         new_pipeline = MyPipeline(self.selected_algorithm_object)
         self.pipelines.append(new_pipeline)
 
-        # Output to console
-        # output = self.simpleKMeans.get_algorithm_parameters()
-        # output += "\n"
-        # output += self.simpleKMeans.get_result()
-        #
-        # self.algoResultsTextEdit.clear()
-        # self.algoResultsTextEdit.appendPlainText(output)
-
-        self.applied_algorithms.append(self.simpleKMeans)
+        self.applied_algorithms.append(self.kNeighbor)
 
         self._update_algo_table()
 
         if self.selected_pipeline_nr is None:
             self.selected_pipeline_nr = 0
+            print("if self.selected_pipeline_nr is None")
         else:
             self.selected_pipeline_nr = len(self.pipelines) - 1
         self.pipelinesTableWidget.selectRow(self.selected_pipeline_nr)
@@ -383,6 +334,10 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
 
     def action_online_analysis_cb(self):
         self.online_analysis_active = not self.online_analysis_active
+        if self.online_analysis_active:
+            self.startStopAnalysisPushButton.setText("Stoppe Analyse")
+        else:
+            self.startStopAnalysisPushButton.setText("Starte Analyse")
 
     def action_open_new_database_cb(self):
         """
@@ -402,18 +357,11 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
             user_name = self.openDatabaseDialog.ui.userLineEdit.text()
             database_name = self.openDatabaseDialog.ui.databaseLineEdit.text()
             password = self.openDatabaseDialog.ui.passwordLineEdit.text()
-
-        if not self.db.open(host_name, user_name, database_name, password):
-            self.dbConnectionActiveLabel.setStyleSheet("QLabel { background-color : red}")
-            QMessageBox.warning(None, "Asset Manager",
-                                QString("Database Error: %1").arg(self.db.lastError().text()))
-            sys.exit(1)
-
-        else:
+        if self.db.open(host_name, user_name, database_name, password) is True:
             # Display Connection status in textEdit
-            output = "Datenbank Verbindung erfolgreich hergestellt: Hostname = {}, Datenbank = {}" \
-                     "".format(host_name, database_name)
-            self.textEdit.setText(output)
+            self.db.get_data()
+            self.update_database_info()
+
             self.dbConnectionActiveLabel.setStyleSheet("QLabel { background-color : green}")
 
             self.currentDatabaseConnectionLabel.setText("Host = {}, Database = {}".format(host_name, database_name))
@@ -421,8 +369,50 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
             # self.tableSelectionComboBox.clear()
             # for tableEntry in self.db.get_tables():
             #     self.tableSelectionComboBox.addItem(tableEntry)
+        else:
+            self.dbConnectionActiveLabel.setStyleSheet("QLabel { background-color : red}")
+            print("No Database Connection possible")
+            # sys.exit(1)
 
         self.populate_table_view_cb()
+
+    def delete_table_cb(self):
+        """
+        Callback Function. Called when QButton Delete Table is pressed. Deletes all entries in data
+        :return:
+        """
+        self.db.delete_table_entries()
+        self.populate_table_view_cb()
+
+    def start_stop_analysis_cb(self):
+        """
+        Function starts or stops Online data analysis, when the "Start Analyse" PushButton in the "Analyse" Tab
+        is pressed
+        :return:
+        """
+        button_text = self.startStopAnalysisPushButton.text()
+        if button_text == "Starte Analyse":
+            self.startStopAnalysisPushButton.setText("Stoppe Analyse")
+            self.online_analysis_active = True
+            self.actionOnlineAnalysis.setChecked(True)
+        if button_text == "Stoppe Analyse":
+            self.startStopAnalysisPushButton.setText("Starte Analyse")
+            self.online_analysis_active = False
+            self.actionOnlineAnalysis.setChecked(False)
+
+    def update_database_info(self):
+        output = ""
+        if self.db.is_connected():
+            db_name = self.db.get_db_name()
+            db_host = self.db.get_host_name()
+            output += "Datenbank Verbindung erfolgreich hergestellt: Hostname = {}, Datenbank = {}\n" \
+                     "".format(db_host, db_name)
+            output += "Anzahl an Datenbankeintraegen: {} \n".format(self.db.count_db_entries())
+            output += "... davon Trainingsdaten: {} \n".format(self.db.count_training_data())
+            output += "... davon analysiert: {} \n".format(self.db.count_processed_data())
+        else:
+            output += "Keine aktive Datenbankverbindung"
+        self.textEdit.setText(output)
 
     def populate_table_view_cb(self):
         """
@@ -432,25 +422,61 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         # ###################################################################################################################
         # Database Integration
         # ###################################################################################################################
-        self.selected_table_name = 'data' #self.tableSelectionComboBox.itemText(index)
+        # self.selected_table_name = 'data' #self.tableSelectionComboBox.itemText(index)
 
         # self.selected_workpiece = ...
 
-        self.irisDataModel.setTable(self.selected_table_name)             # Load "iris" table from currently open database
+        # self.irisDataModel.setTable(self.selected_table_name)             # Load "iris" table from currently open database
+        #
+        # self.irisDataModel.select()
 
-        self.irisDataModel.select()
-
-        self.databaseTableView.setModel(self.irisDataModel)
-        # self.connect(self.databaseTableView.selectionModel(), SIGNAL("selectionChanged(QItemSelection, QItemSelection)"), self.id_selection_cb)
-
-        # # Set custom Delegate
-        # self.databaseTableView.setItemDelegate()
-        self.databaseTableView.setSelectionMode(QTableView.SingleSelection)
-        self.databaseTableView.hideColumn(6)
-        self.databaseTableView.setSelectionBehavior(QTableView.SelectRows)
-        self.databaseTableView.resizeColumnsToContents()
+        # # DEBUG: Uncomment databaseTableView
+        # self.databaseTableView.setModel(self.databaseModel)
+        # # self.connect(self.databaseTableView.selectionModel(), SIGNAL("selectionChanged(QItemSelection, QItemSelection)"), self.id_selection_cb)
+        #
+        # # # Set custom Delegate
+        # # self.databaseTableView.setItemDelegate()
+        # self.databaseTableView.setSelectionMode(QTableView.SingleSelection)
+        # self.databaseTableView.hideColumn(6)
+        # self.databaseTableView.setSelectionBehavior(QTableView.SelectRows)
+        # self.databaseTableView.resizeColumnsToContents()
 
         self.setup_dialoges()
+
+        #####################################################################
+        #####################
+        #############
+        header_names = self.db.get_column_names()
+        header_names = header_names[:-1]        # header_names[:-1] means don't regard last column > data
+        entries = self.db.get_data()
+        self.databaseTableWidget.setColumnCount(len(header_names))
+        self.databaseTableWidget.setRowCount(len(entries))
+        self.databaseTableWidget.verticalHeader().setVisible(True)
+
+        # Header
+        self.databaseTableWidget.setHorizontalHeaderLabels(QStringList(header_names))
+        self.databaseTableWidget.horizontalHeader().setStretchLastSection(True)
+        # Loop through all entries/cells
+        for row_nr, row in enumerate(entries):
+            for col_nr, col in enumerate(row[:-1]):      # row[:-1] means don't regard last column > data
+                item = QTableWidgetItem()
+                item.setText(str(col))
+                item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                self.databaseTableWidget.setItem(row_nr, col_nr, item)
+                self.databaseTableWidget.resizeColumnsToContents()
+
+        #
+        # print("col_names = {}".format(header_names))
+        # item = QTableWidgetItem()
+        # for header in header_names:
+        #     item.setText(header)
+        #     # self.databaseTableWidget.setHorizontalHeaderLabels(QStringList('Pipeline'))
+
+            # item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+        # self.databaseTableWidget.setItem(index, 0, item)
+        # self.databaseTableWidget.resizeColumnsToContents()
+        # self.databaseTableWidget.setHorizontalHeaderLabels(QStringList('Pipeline'))
+        # self.databaseTableWidget.horizontalHeader().setStretchLastSection(True)
 
     def add_entry_cb(self):
         """
@@ -458,18 +484,19 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         It adds an Entry to the database
         :return:
         """
-        row = self.databaseTableView.currentIndex().row() \
-            if self.databaseTableView.currentIndex().isValid() else 0
-
-        QSqlDatabase.database().transaction()
-        self.irisDataModel.insertRow(row)
-        index = self.irisDataModel.index(row, 0)
-        self.databaseTableView.setCurrentIndex(index)
-
-        query = QSqlQuery()
-        query.exec_("SELECT MAX(id) FROM {}".format(self.selected_table_name))
-        QSqlDatabase.database().commit()
-        self.databaseTableView.edit(index)
+        pass
+        # row = self.databaseTableView.currentIndex().row() \
+        #     if self.databaseTableView.currentIndex().isValid() else 0
+        #
+        # QSqlDatabase.database().transaction()
+        # self.irisDataModel.insertRow(row)
+        # index = self.irisDataModel.index(row, 0)
+        # self.databaseTableView.setCurrentIndex(index)
+        #
+        # query = QSqlQuery()
+        # query.exec_("SELECT MAX(id) FROM {}".format(self.selected_table_name))
+        # QSqlDatabase.database().commit()
+        # self.databaseTableView.edit(index)
 
     def delete_entry_cb(self):
         """
@@ -478,13 +505,9 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         It deletes the selected entry from the database
         :return:
         """
-        # FIX: Funktion loescht immer alle Eintraege mit gleichem Inhalt
-        index = self.databaseTableView.currentIndex()
-        if not index.isValid():
-            return
-
-        self.irisDataModel.removeRow(index.row())
-        self.irisDataModel.submitAll()
+        if self.selected_db_entry_uuid:
+            self.db.delete_entry(self.selected_db_entry_uuid)
+            self.populate_table_view_cb()
 
     def configure_algo_cb(self):
         """
@@ -493,27 +516,82 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         It opens a dialog where the user can configure the selected Algorithm.
         :return:
         """
-        pass
         # Create Dialog
         self.selected_algorithm_name = str(self.chooseAlgoComboBox.currentText())
         if self.selected_algorithm_name == 'KNeighborsClassifier':
 
-            if self.simpleKMeansDialog.exec_():
-                self.simpleKMeans = self.simpleKMeansDialog.get_algorithm()
-            if self.simpleKMeans:
+            if self.kNeighborClassifierDialogController.exec_():
+                self.kNeighbor = self.kNeighborClassifierDialogController.get_algorithm()
+            if self.kNeighbor:
                 # for row in range(0, self.num_rows):
                 # self.simpleKMeans.set_attributes(X)
                 # self.simpleKMeans.set_class(Y)
                 # self.simpleKMeans.train_model()
                 # TODO: Execute Algorithm
 
-                self.selected_algorithm_object = self.simpleKMeans
+                self.selected_algorithm_object = self.kNeighbor
 
         elif self.selected_algorithm_name == 'FilteredClusterer':
             pass
 
         elif self.selected_algorithm_name == 'Cobweb':
             pass
+
+    def action_help_about_cb(self):
+        QMessageBox.about(self, "Ueber Data Analyzer",
+                          """<b>Data Analyzer</b> v %s
+                          <p>Copyright &copy; 2017 IAS Universitaet Stuttgart
+                          <p>Diese Software soll die Umsetzung eines automatisierten
+                          Daten Analyse Prozesses zur industriellen Qualitaetssicherung exemplarisch darstellen.
+                          <p>Python %s - Qt %s - PyQt %s on %s""" % (
+                              __version__, platform.python_version(),
+                              QT_VERSION_STR, PYQT_VERSION_STR, platform.system()))
+
+    def action_save_as_cb(self):
+        pass
+        dialog = QFileDialog()
+        dialog.setDefaultSuffix(QString(".png"))
+        file_name = ""
+        file_name = unicode(dialog.getSaveFileName(self,
+                                                       "Analysis - Save Result", file_name,
+                                                       "Dateiendungen (*.png, *.jpeg, *.jpg, *.bmp"))
+
+        if file_name == "":         # Dialog canceled by user
+            self.filename = None
+            return
+        # Default suffix
+        if file_name.find(".") == -1:         # -1 means character not found
+            file_name += ".png"
+        self.filename = file_name
+        self.action_save_cb()
+
+    def action_save_cb(self):
+        pass
+        if self.filename is None:
+            self.action_save_as_cb()
+        else:
+            figure = self.plot1.get_figure()
+            figure.savefig(self.filename)
+            QMessageBox.information(None, "Analyseergebniss erfolgreich gespeichert",
+                                QString("Analyseergebniss erfolgreich gespeichert: \n "
+                                        "Pfad: {}".format(self.filename)))
+
+    def action_print_cb(self):
+        pass
+        self.printer = QPrinter(QPrinter.HighResolution)
+        # self.printer.setPageSize(QPrinter.Letter)
+        dialog = QPrintDialog(self.printer, self)
+        if dialog.exec_():
+            painter = QPainter(self.printer)
+            rect = painter.viewport()
+            image = QPixmap.grabWidget(self.plotLabel1)
+            size = image.size()
+            size.scale(rect.size(), Qt.KeepAspectRatio)
+            painter.setViewport(rect.x()*10, rect.y()*10, size.width()*10,
+            size.height()*10)
+            qimage = image.toImage()
+            qpoint = QPoint(0, 0)
+            painter.drawImage(qpoint, qimage)
 
     ###################################################################################################################
     # Set Functions

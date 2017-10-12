@@ -16,9 +16,17 @@ from sklearn import datasets
 class Algorithm(object):
     def __init__(self):
         super(Algorithm, self).__init__()
-        self.name = None
+        self.name = "DefaultAlgorithmName"
         self.data_component1 = None
         self.auto_config = False
+        self.estimator = None
+
+    def get_estimator(self):
+        """
+        Returns estimator
+        :return: (sklearn.Estimator)
+        """
+        return self.estimator
 
     def get_name(self):
         """
@@ -46,6 +54,7 @@ class Algorithm(object):
         Must be reimplemented for every subclass
         :return:
         """
+        pass
 
     def return_parameters(self):
         pass
@@ -55,18 +64,12 @@ class Cluster(Algorithm):
         super(Cluster, self).__init__()
 
 
-class SimpleKMeans(Cluster):
-    def __init__(self, n_neighbors=3, metric='euclidean', algorithm='auto', leaf_size=30):
-        super(KNeighborsClassifier, self).__init__()
-        pass
-
-
-class KNeighborsClassifier(Cluster):
+class KNeighborsAlgorithm(Cluster):
     """
     This class implements a KNeighborsClassifier Classifier
     """
     def __init__(self, n_neighbors=3, metric='euclidean', algorithm='auto', leaf_size=30):
-        super(KNeighborsClassifier, self).__init__()
+        super(KNeighborsAlgorithm, self).__init__()
         # User definable parameters
         self.name = "KNeighborsClassifier"
         self.n_neighbors = n_neighbors
@@ -81,6 +84,8 @@ class KNeighborsClassifier(Cluster):
                            "leaf_size": self.leaf_size,
                            "cross_validation": self.cross_validation
                            }
+        self.estimator = KNeighborsClassifier(n_neighbors=self.n_neighbors, metric=self.metric,
+                                              algorithm=self.algorithm, leaf_size=self.leaf_size, )
 
         # Attributes
         self.X = None
@@ -121,7 +126,7 @@ class KNeighborsClassifier(Cluster):
         self.Y = np.zeros((351,), dtype='bool')
 
         X_train, X_test, Y_train, Y_test = train_test_split(self.X, self.Y, random_state=14)
-        estimator = KNeighborsClassifier()
+        estimator = KNeighborsAlgorithm()
         estimator.fit(X_train, Y_train)
 
         if self.cross_validation is False:
@@ -138,7 +143,7 @@ class KNeighborsClassifier(Cluster):
         all_scores = []
         parameter_values = list(range(1, 21))  # Include 20
         for n_neighbors in parameter_values:
-            estimator = KNeighborsClassifier(n_neighbors=n_neighbors)
+            estimator = KNeighborsAlgorithm(n_neighbors=n_neighbors)
             scores = cross_val_score(estimator, self.X, self.Y, scoring='accuracy')
             avg_scores.append(np.mean(scores))
             all_scores.append(scores)
@@ -150,11 +155,11 @@ class KNeighborsClassifier(Cluster):
         X_broken = np.array(self.X)
         X_broken[:, ::2] /= 10
         X_transformed = MinMaxScaler().fit_transform(X_broken)
-        estimator = KNeighborsClassifier()
+        estimator = KNeighborsAlgorithm()
         transformed_scores = cross_val_score(estimator, X_transformed, self.Y, scoring='accuracy')
 
         # Create a pipeline
-        scaling_pipeline = Pipeline([('scale', MinMaxScaler()), ('predict', KNeighborsClassifier())])
+        scaling_pipeline = Pipeline([('scale', MinMaxScaler()), ('predict', KNeighborsAlgorithm())])
         scores = cross_val_score(scaling_pipeline, X_broken, self.Y, scoring='accuracy')
 
     def get_configuration_info(self):

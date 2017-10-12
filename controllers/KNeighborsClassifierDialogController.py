@@ -1,7 +1,7 @@
 from PyQt4 import QtCore, QtGui, Qt
 
 from views import KNeighborsClassifierDialog
-from models.Algorithms import KNeighborsClassifier
+from models.Algorithms import KNeighborsAlgorithm
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -10,11 +10,11 @@ except AttributeError:
         return s
 
 
-class Controller(Qt.QDialog,KNeighborsClassifierDialog.Ui_KNeighborsClassifierDialog):
+class Controller(Qt.QDialog, KNeighborsClassifierDialog.Ui_KNeighborsClassifierDialog):
     def __init__(self):
         super(Controller, self).__init__()
         self.setupUi(self)
-        self.kNeighborsClassifier = None
+        self.algorithm = None
         self.distance_measure = None
 
         # ###################################################################################################################
@@ -47,16 +47,16 @@ class Controller(Qt.QDialog,KNeighborsClassifierDialog.Ui_KNeighborsClassifierDi
         metric = str(self.distanceMeassureComboBox.currentText())
         leaf_size = int(self.leafSizeLineEdit.text())
         algorithm = str(self.chooseAlgorithmComboBox.currentText())
-        self.kNeighborsClassifier = KNeighborsClassifier(n_neighbors, metric, algorithm, leaf_size)
+        self.algorithm = KNeighborsAlgorithm(n_neighbors, metric, algorithm, leaf_size)
         autoconfig = self.autoFitParameterCheckBox.isChecked()
-        self.kNeighborsClassifier.set_auto_config(autoconfig)
+        self.algorithm.set_auto_config(autoconfig)
 
     def get_algorithm(self):
         """
         Returns parameterized algorithm instance
         :return:parameterized (Algorithm.SimpleKMeans) Instance of class Algorithm.SimpleKMeans with selected parameter
         """
-        return self.kNeighborsClassifier
+        return self.algorithm
 
     def set_distance_measure(self, index):
         """

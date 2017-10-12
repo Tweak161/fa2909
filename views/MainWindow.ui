@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1203</width>
-    <height>819</height>
+    <width>964</width>
+    <height>626</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -25,7 +25,7 @@
        <enum>Qt::DefaultContextMenu</enum>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="dataintegrationTab">
        <attribute name="title">
@@ -54,25 +54,6 @@
                 </property>
                 <property name="text">
                  <string>Datenbank</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QPushButton" name="connectToDatabasePushButton">
-                <property name="minimumSize">
-                 <size>
-                  <width>160</width>
-                  <height>0</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>160</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="text">
-                 <string>Verbinden</string>
                 </property>
                </widget>
               </item>
@@ -994,6 +975,25 @@
                 </property>
                </widget>
               </item>
+              <item row="0" column="1">
+               <widget class="QPushButton" name="connectToDatabasePushButton">
+                <property name="minimumSize">
+                 <size>
+                  <width>160</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>160</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Verbinden</string>
+                </property>
+               </widget>
+              </item>
              </layout>
             </item>
             <item>
@@ -1021,7 +1021,7 @@
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout">
             <item>
-             <widget class="QTableView" name="databaseTableView"/>
+             <widget class="QTableWidget" name="databaseTableWidget"/>
             </item>
             <item>
              <layout class="QVBoxLayout" name="verticalLayout">
@@ -1040,7 +1040,7 @@
                  </size>
                 </property>
                 <property name="text">
-                 <string>&amp;Add Entry</string>
+                 <string>&amp;Hinzufügen</string>
                 </property>
                </widget>
               </item>
@@ -1059,7 +1059,7 @@
                  </size>
                 </property>
                 <property name="text">
-                 <string>&amp;Delete Entry</string>
+                 <string>&amp;Löschen</string>
                 </property>
                </widget>
               </item>
@@ -1078,7 +1078,7 @@
                  </size>
                 </property>
                 <property name="text">
-                 <string>Edit E&amp;ntry</string>
+                 <string>&amp;Editieren</string>
                 </property>
                </widget>
               </item>
@@ -1097,7 +1097,7 @@
                  </size>
                 </property>
                 <property name="text">
-                 <string>Delete &amp;Table</string>
+                 <string>Tabelle Löschen</string>
                 </property>
                </widget>
               </item>
@@ -1110,26 +1110,7 @@
                  </size>
                 </property>
                 <property name="text">
-                 <string>&amp;Refresh</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="quitButton">
-                <property name="minimumSize">
-                 <size>
-                  <width>160</width>
-                  <height>0</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>160</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="text">
-                 <string>&amp;Close Connection</string>
+                 <string>&amp;Aktualisieren</string>
                 </property>
                </widget>
               </item>
@@ -1155,195 +1136,54 @@
        <attribute name="title">
         <string>Analyse</string>
        </attribute>
-       <layout class="QHBoxLayout" name="horizontalLayout_7">
+       <layout class="QVBoxLayout" name="verticalLayout_10">
         <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_6">
+         <layout class="QVBoxLayout" name="verticalLayout_9">
           <item>
-           <layout class="QVBoxLayout" name="verticalLayout_6">
+           <layout class="QHBoxLayout" name="horizontalLayout_7">
             <item>
-             <widget class="QLabel" name="label_18">
-              <property name="text">
-               <string>Neue Pipeline</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_3">
+             <layout class="QVBoxLayout" name="verticalLayout_6">
               <item>
-               <widget class="QLabel" name="label_16">
+               <widget class="QLabel" name="label_18">
                 <property name="text">
-                 <string>&amp;Algorithmus</string>
-                </property>
-                <property name="buddy">
-                 <cstring>chooseAlgoComboBox</cstring>
+                 <string>Neue Pipeline</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="chooseAlgoComboBox">
-                <property name="minimumSize">
-                 <size>
-                  <width>150</width>
-                  <height>0</height>
-                 </size>
-                </property>
+               <layout class="QHBoxLayout" name="horizontalLayout_6">
                 <item>
-                 <property name="text">
-                  <string>KNeighborsClassifier</string>
-                 </property>
+                 <widget class="QLabel" name="label_16">
+                  <property name="text">
+                   <string>&amp;Algorithmus</string>
+                  </property>
+                  <property name="buddy">
+                   <cstring>chooseAlgoComboBox</cstring>
+                  </property>
+                 </widget>
                 </item>
                 <item>
-                 <property name="text">
-                  <string>SimpleKMeans</string>
-                 </property>
-                </item>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="algoConfigButton">
-                <property name="minimumSize">
-                 <size>
-                  <width>140</width>
-                  <height>0</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>140</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="text">
-                 <string>Konfiguration</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="applyAlgoButton">
-                <property name="minimumSize">
-                 <size>
-                  <width>140</width>
-                  <height>0</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>140</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="text">
-                 <string>Hinzufügen</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-            <item>
-             <widget class="QLabel" name="label_19">
-              <property name="text">
-               <string>Pipelines</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QTableWidget" name="pipelinesTableWidget"/>
-            </item>
-            <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_4">
-              <item>
-               <spacer name="horizontalSpacer_2">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>40</width>
-                  <height>20</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-              <item>
-               <widget class="QPushButton" name="deletePipelineButton">
-                <property name="minimumSize">
-                 <size>
-                  <width>140</width>
-                  <height>0</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>140</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="text">
-                 <string>Entfernen</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-            <item>
-             <widget class="Line" name="line_3">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QLabel" name="label_29">
-              <property name="text">
-               <string> Filter</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_5">
-              <item>
-               <widget class="QTableWidget" name="appliedFilterTableWidget"/>
-              </item>
-              <item>
-               <layout class="QVBoxLayout" name="verticalLayout_4">
-                <item>
-                 <widget class="QComboBox" name="choseFilterComboBox">
+                 <widget class="QComboBox" name="chooseAlgoComboBox">
                   <property name="minimumSize">
                    <size>
-                    <width>140</width>
+                    <width>150</width>
                     <height>0</height>
                    </size>
                   </property>
-                  <property name="maximumSize">
-                   <size>
-                    <width>140</width>
-                    <height>16777215</height>
-                   </size>
-                  </property>
                   <item>
                    <property name="text">
-                    <string>None</string>
+                    <string>KNeighborsClassifier</string>
                    </property>
                   </item>
                   <item>
                    <property name="text">
-                    <string>MinMaxFilter</string>
-                   </property>
-                  </item>
-                  <item>
-                   <property name="text">
-                    <string>Extremwertfilter</string>
-                   </property>
-                  </item>
-                  <item>
-                   <property name="text">
-                    <string>Median</string>
+                    <string>SimpleKMeans</string>
                    </property>
                   </item>
                  </widget>
                 </item>
                 <item>
-                 <widget class="QPushButton" name="configureFilterButton">
+                 <widget class="QPushButton" name="algoConfigButton">
                   <property name="minimumSize">
                    <size>
                     <width>140</width>
@@ -1362,39 +1202,7 @@
                  </widget>
                 </item>
                 <item>
-                 <widget class="QPushButton" name="deleteFilterButton">
-                  <property name="minimumSize">
-                   <size>
-                    <width>140</width>
-                    <height>0</height>
-                   </size>
-                  </property>
-                  <property name="maximumSize">
-                   <size>
-                    <width>140</width>
-                    <height>16777215</height>
-                   </size>
-                  </property>
-                  <property name="text">
-                   <string>Entfernen</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <spacer name="verticalSpacer_3">
-                  <property name="orientation">
-                   <enum>Qt::Vertical</enum>
-                  </property>
-                  <property name="sizeHint" stdset="0">
-                   <size>
-                    <width>20</width>
-                    <height>40</height>
-                   </size>
-                  </property>
-                 </spacer>
-                </item>
-                <item>
-                 <widget class="QPushButton" name="addFilterButton">
+                 <widget class="QPushButton" name="applyAlgoButton">
                   <property name="minimumSize">
                    <size>
                     <width>140</width>
@@ -1414,30 +1222,251 @@
                 </item>
                </layout>
               </item>
+              <item>
+               <widget class="QLabel" name="label_19">
+                <property name="text">
+                 <string>Pipelines</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QTableWidget" name="pipelinesTableWidget"/>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_5">
+                <item>
+                 <spacer name="horizontalSpacer_2">
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>40</width>
+                    <height>20</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="deletePipelineButton">
+                  <property name="minimumSize">
+                   <size>
+                    <width>140</width>
+                    <height>0</height>
+                   </size>
+                  </property>
+                  <property name="maximumSize">
+                   <size>
+                    <width>140</width>
+                    <height>16777215</height>
+                   </size>
+                  </property>
+                  <property name="text">
+                   <string>Entfernen</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <widget class="Line" name="line_3">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_29">
+                <property name="text">
+                 <string> Filter</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_4">
+                <item>
+                 <widget class="QTableWidget" name="appliedFilterTableWidget"/>
+                </item>
+                <item>
+                 <layout class="QVBoxLayout" name="verticalLayout_4">
+                  <item>
+                   <widget class="QComboBox" name="chooseFilterComboBox">
+                    <property name="minimumSize">
+                     <size>
+                      <width>140</width>
+                      <height>0</height>
+                     </size>
+                    </property>
+                    <property name="maximumSize">
+                     <size>
+                      <width>140</width>
+                      <height>16777215</height>
+                     </size>
+                    </property>
+                    <item>
+                     <property name="text">
+                      <string>None</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>MinMaxFilter</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>MeanFilter</string>
+                     </property>
+                    </item>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="configureFilterButton">
+                    <property name="minimumSize">
+                     <size>
+                      <width>140</width>
+                      <height>0</height>
+                     </size>
+                    </property>
+                    <property name="maximumSize">
+                     <size>
+                      <width>140</width>
+                      <height>16777215</height>
+                     </size>
+                    </property>
+                    <property name="text">
+                     <string>Konfiguration</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="deleteFilterButton">
+                    <property name="minimumSize">
+                     <size>
+                      <width>140</width>
+                      <height>0</height>
+                     </size>
+                    </property>
+                    <property name="maximumSize">
+                     <size>
+                      <width>140</width>
+                      <height>16777215</height>
+                     </size>
+                    </property>
+                    <property name="text">
+                     <string>Entfernen</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <spacer name="verticalSpacer">
+                    <property name="orientation">
+                     <enum>Qt::Vertical</enum>
+                    </property>
+                    <property name="sizeHint" stdset="0">
+                     <size>
+                      <width>20</width>
+                      <height>40</height>
+                     </size>
+                    </property>
+                   </spacer>
+                  </item>
+                  <item>
+                   <spacer name="verticalSpacer_3">
+                    <property name="orientation">
+                     <enum>Qt::Vertical</enum>
+                    </property>
+                    <property name="sizeHint" stdset="0">
+                     <size>
+                      <width>137</width>
+                      <height>13</height>
+                     </size>
+                    </property>
+                   </spacer>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="addFilterButton">
+                    <property name="minimumSize">
+                     <size>
+                      <width>140</width>
+                      <height>0</height>
+                     </size>
+                    </property>
+                    <property name="maximumSize">
+                     <size>
+                      <width>140</width>
+                      <height>16777215</height>
+                     </size>
+                    </property>
+                    <property name="text">
+                     <string>Hinzufügen</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="Line" name="line">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QVBoxLayout" name="verticalLayout_7">
+              <item>
+               <widget class="QLabel" name="label_17">
+                <property name="text">
+                 <string>Parameter</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPlainTextEdit" name="pipelineInfoTextEdit">
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
              </layout>
             </item>
            </layout>
           </item>
           <item>
-           <widget class="Line" name="line">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <layout class="QVBoxLayout" name="verticalLayout_7">
+           <layout class="QHBoxLayout" name="horizontalLayout_3">
             <item>
-             <widget class="QLabel" name="label_17">
-              <property name="text">
-               <string>Parameter</string>
+             <spacer name="horizontalSpacer_4">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
               </property>
-             </widget>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
             </item>
             <item>
-             <widget class="QPlainTextEdit" name="pipelineInfoTextEdit">
-              <property name="readOnly">
-               <bool>true</bool>
+             <widget class="QPushButton" name="startStopAnalysisPushButton">
+              <property name="minimumSize">
+               <size>
+                <width>140</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>140</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Starte Analyse</string>
               </property>
              </widget>
             </item>
@@ -1968,19 +1997,16 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1203</width>
-     <height>27</height>
+     <width>964</width>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
      <string>Datei</string>
     </property>
-    <addaction name="actionNewFile"/>
-    <addaction name="actionActionOpenProject"/>
-    <addaction name="separator"/>
     <addaction name="actionSaveFile"/>
-    <addaction name="actionSpeichern_unter"/>
+    <addaction name="actionSaveFileAs"/>
     <addaction name="separator"/>
     <addaction name="actionPrint"/>
     <addaction name="separator"/>
@@ -1997,7 +2023,7 @@
     <property name="title">
      <string>Hilfe</string>
     </property>
-    <addaction name="actionHilfe"/>
+    <addaction name="actionHelpAbout"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuBearbeiten"/>
@@ -2014,16 +2040,15 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="actionNewFile"/>
-   <addaction name="actionActionOpenProject"/>
-   <addaction name="separator"/>
    <addaction name="actionSaveFile"/>
-   <addaction name="actionSpeichern_unter"/>
+   <addaction name="actionSaveFileAs"/>
    <addaction name="separator"/>
    <addaction name="actionPrint"/>
    <addaction name="separator"/>
    <addaction name="actionOpenNewDatabase"/>
    <addaction name="actionOnlineAnalysis"/>
+   <addaction name="separator"/>
+   <addaction name="actionHelpAbout"/>
    <addaction name="separator"/>
    <addaction name="actionQuit"/>
    <addaction name="separator"/>
@@ -2041,7 +2066,7 @@
     <string>Neu...</string>
    </property>
    <property name="toolTip">
-    <string>Open New File</string>
+    <string>Datei Öffnen</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+N</string>
@@ -2054,6 +2079,9 @@
    </property>
    <property name="text">
     <string>Neue Datenbank Verbindung</string>
+   </property>
+   <property name="toolTip">
+    <string>Neue Datenbank Verbindung herstellen</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+N</string>
@@ -2068,7 +2096,7 @@
     <string>Speichern</string>
    </property>
    <property name="toolTip">
-    <string>Save Current Project</string>
+    <string>Analyseergebnisse speichern</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+S</string>
@@ -2084,7 +2112,7 @@
     <string>Quit</string>
    </property>
    <property name="toolTip">
-    <string>Quit</string>
+    <string>Programm Beenden</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Q</string>
@@ -2100,7 +2128,7 @@
     <string>Drucken</string>
    </property>
    <property name="toolTip">
-    <string>Print Results</string>
+    <string>Analyseergebnisse Drucken</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+P</string>
@@ -2119,7 +2147,7 @@
     <string>Aktiviere Online Analyse</string>
    </property>
    <property name="toolTip">
-    <string>Aktiviere/Deaktiviere die Online Analyse von Daten</string>
+    <string>Online Analyse Aktivieren/Deaktivieren</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+O</string>
@@ -2137,25 +2165,35 @@
     <string>Öffnen...</string>
    </property>
    <property name="toolTip">
-    <string>Öffne Projekt</string>
+    <string>Projekt Öffnen</string>
    </property>
   </action>
-  <action name="actionHilfe">
+  <action name="actionHelpAbout">
+   <property name="icon">
+    <iconset resource="../content/resources.qrc">
+     <normaloff>:/Help.png</normaloff>:/Help.png</iconset>
+   </property>
    <property name="text">
-    <string>Hilfe</string>
+    <string>Über</string>
+   </property>
+   <property name="toolTip">
+    <string>Informationen Anzeigen</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+H</string>
    </property>
   </action>
-  <action name="actionSpeichern_unter">
+  <action name="actionSaveFileAs">
    <property name="icon">
     <iconset>
      <normalon>:/SaveAs.png</normalon>
     </iconset>
    </property>
    <property name="text">
-    <string>Speichern unter</string>
+    <string>Speichern Unter</string>
    </property>
    <property name="toolTip">
-    <string>Speichern unter</string>
+    <string>Analyseergebnisse Speichern Unter</string>
    </property>
   </action>
  </widget>

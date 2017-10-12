@@ -9,12 +9,12 @@ class MplCanvas(Canvas):
     """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
 
     def __init__(self, parent=None, width=5, height=4, dpi=100):
-        fig = Figure(figsize=(width, height), dpi=dpi)
-        self.axes = fig.add_subplot(111, projection='3d')
-        # self.Axes3D.mouse_init()
+        self.fig = Figure(figsize=(width, height), dpi=dpi)
+        Canvas.__init__(self, self.fig)
+        self.axes = self.fig.add_subplot(111, projection='3d')
+        self.axes.mouse_init()
         self.axes.autoscale(enable=True, tight=None)
 
-        Canvas.__init__(self, fig)
         self.setParent(parent)
 
         Canvas.setSizePolicy(self, QtGui.QSizePolicy.Expanding,
@@ -25,6 +25,7 @@ class MplCanvas(Canvas):
         self.sca = self.axes.scatter(0, 0 , c='b')
         self.axes.add_artist(self.sca)
         self.sca.set_visible(False)
+
 
 class DynamicMplCanvas(MplCanvas):
     """A canvas that updates itself every second with a new plot."""
@@ -39,6 +40,20 @@ class DynamicMplCanvas(MplCanvas):
         """
         self.data = data
         self._update_figure()
+
+    def get_figure(self):
+        pass
+        return self.fig
+
+    def get_q_image(self):
+        """
+        Returns a QImage
+        :return: (QImage) Returns QImage of plot.
+        """
+        size = self.size()
+        width, height = size.width(), size.height()
+        im = QtGui.QImage(self.buffer_rgba(), width, height, QImage.Format_ARGB32)
+        return im
 
     def _update_figure(self):
         # self.sca.set_visible(False)

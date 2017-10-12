@@ -9,5 +9,6 @@
 <file alias="OnlineAnalysis.png">images/onlineAnalysis.png</file>
 <file alias="SaveAs.png">images/filesaveas.png</file>
 <file alias="FileOpen.png">images/fileopen.png</file>
+<file alias="Help.png">images/help.png</file>
 </qresource>
 </RCC>
