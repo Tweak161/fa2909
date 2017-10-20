@@ -9,11 +9,11 @@ SET check_function_bodies = false;
 
 -- object: fa2909 | type: ROLE --
 -- DROP ROLE IF EXISTS fa2909;
-CREATE ROLE fa2909 WITH 
-	SUPERUSER
-	INHERIT
-	LOGIN
-	ENCRYPTED PASSWORD '********';
+--CREATE ROLE fa2909 WITH 
+--	SUPERUSER
+--	INHERIT
+--	LOGIN
+--	ENCRYPTED PASSWORD '********';
 -- ddl-end --
 
 
@@ -29,11 +29,11 @@ CREATE ROLE fa2909 WITH
 
 -- object: "uuid-ossp" | type: EXTENSION --
 -- DROP EXTENSION IF EXISTS "uuid-ossp" CASCADE;
-CREATE EXTENSION "uuid-ossp"
-      WITH SCHEMA public
-      VERSION '1.0';
+--CREATE EXTENSION "uuid-ossp"
+--      WITH SCHEMA public
+--      VERSION '1.0';
 -- ddl-end --
-COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UUIDs)';
+--COMMENT ON EXTENSION "uuid-ossp" IS 'generate universally unique identifiers (UUIDs)';
 -- ddl-end --
 
 -- object: public.data | type: TABLE --

@@ -38,18 +38,20 @@ class Controller(Qt.QDialog, KNeighborsClassifierDialog.Ui_KNeighborsClassifierD
         self.connect(self.distanceMeassureComboBox, QtCore.SIGNAL("currentIndexChanged(int)"),
                      self.set_distance_measure)
         QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("accepted()")), self.apply)
-        # self.connect(self.buttonBox.button(QDialogButtonBox.Apply), SIGNAL("clicked()"), self.apply)
-        # self.connect(self.buttonBox, SIGNAL("rejected()"), self, SLOT("reject()"))
 
     def apply(self):
         # Following Code is executed after closing KNeighborsClassifierDialog Window
-        n_neighbors = int(self.numNeighborsLineEdit.text())        # cast QString to int
+        if self.numNeighborsLineEdit.text() == "":
+            n_neighbors = 3       # Default Value
+        else:
+            n_neighbors = int(self.numNeighborsLineEdit.text())
         metric = str(self.distanceMeassureComboBox.currentText())
-        leaf_size = int(self.leafSizeLineEdit.text())
+        if self.leafSizeLineEdit.text() == "":
+            leaf_size = 30          # Default value
+        else:
+            leaf_size = int(self.leafSizeLineEdit.text())
         algorithm = str(self.chooseAlgorithmComboBox.currentText())
         self.algorithm = KNeighborsAlgorithm(n_neighbors, metric, algorithm, leaf_size)
-        autoconfig = self.autoFitParameterCheckBox.isChecked()
-        self.algorithm.set_auto_config(autoconfig)
 
     def get_algorithm(self):
         """
@@ -65,8 +67,6 @@ class Controller(Qt.QDialog, KNeighborsClassifierDialog.Ui_KNeighborsClassifierD
         It sets the value for the Distanzmass
         :return:
         """
-        pass
         self.distance_measure = self.distanceMeassureComboBox.itemText(index)
-        print(self.distance_measure)
 
 

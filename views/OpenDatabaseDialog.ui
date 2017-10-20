@@ -140,6 +140,13 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>hostLineEdit</tabstop>
+  <tabstop>userLineEdit</tabstop>
+  <tabstop>databaseLineEdit</tabstop>
+  <tabstop>passwordLineEdit</tabstop>
+  <tabstop>buttonBox</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>

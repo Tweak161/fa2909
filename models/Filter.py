@@ -2,6 +2,7 @@ class Filter(object):
     def __init__(self):
         self.name = None
         self.transformation = None
+        self.info = ""
 
     def __str__(self):
         return self.name
@@ -11,6 +12,14 @@ class Filter(object):
 
     def get_transformation(self):
         return self.transformation
+
+    def set_configuration_info(self, info):
+        """
+        Sets configuration info string
+        :param info:  (str) Formatted string with configuration info
+        :return:
+        """
+        self.info = info
 
     def get_name(self):
         """
@@ -40,9 +49,12 @@ class MinMaxFilter(Filter):
     def set_feature_range(self, feature_range):
         self.feature_range = feature_range
 
-class MeanFilter(Filter):
+class Scaler(Filter):
     def __init__(self):
-        super(MeanFilter, self).__init__()
+        super(Scaler, self).__init__()
+        self.name = "StandardScaler"
 
+    def get_configuration_info(self):
+        return self.info
 
 

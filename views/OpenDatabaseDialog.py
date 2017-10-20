@@ -88,6 +88,10 @@ class Ui_Dialog(object):
         QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("accepted()")), Dialog.accept)
         QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL(_fromUtf8("rejected()")), Dialog.reject)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
+        Dialog.setTabOrder(self.hostLineEdit, self.userLineEdit)
+        Dialog.setTabOrder(self.userLineEdit, self.databaseLineEdit)
+        Dialog.setTabOrder(self.databaseLineEdit, self.passwordLineEdit)
+        Dialog.setTabOrder(self.passwordLineEdit, self.buttonBox)
 
     def retranslateUi(self, Dialog):
         Dialog.setWindowTitle(_translate("Dialog", "Datenbankverbindung Herstellen", None))

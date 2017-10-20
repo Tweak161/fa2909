@@ -17,6 +17,8 @@ from views import OpenDatabaseDialog
 # Controller
 from controllers import KNeighborsClassifierDialogController
 from controllers import MinMaxScalerDialogController
+from controllers import SVMClassifierDialogController
+from controllers import ScalerDialogCongroller
 
 # Models
 from models.Pipeline import MyPipeline
@@ -32,8 +34,12 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
 
         self.db = DatabaseConnection()
         self.selected_table_name = None
-        self.kNeighbor = None
+        # Algorithms
+        self.kNeighborAlgorithm = None
+        self.SVMAlgorithm = None
+        # Filter
         self.minMaxFilter = None
+        self.scalerFilter = None
         self.selected_algorithm_object = None
         self.pipelines = []
         self.selected_pipeline_nr = None
@@ -69,8 +75,9 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         # Initialize Dialogs
         # #############################################################################################################
         self.kNeighborClassifierDialogController = KNeighborsClassifierDialogController.Controller()
-
         self.minMaxScalerDialogController = MinMaxScalerDialogController.Controller()
+        self.SVMClassifierDialogController = SVMClassifierDialogController.Controller()
+        self.scalerDialogController = ScalerDialogCongroller.Controller()
 
         self.configureFilterDialog = QDialog()
         self.configureFilterDialog.ui = ConfigureFilterDialog.Ui_ConfigureFilterDialog()
@@ -93,7 +100,6 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         self.connect(self.actionPrint, SIGNAL("triggered()"), self.action_print_cb)
 
         # QButton
-        self.connect(self.addEntryButton, SIGNAL("clicked()"), self.add_entry_cb)
         self.connect(self.deleteEntryButton, SIGNAL("clicked()"), self.delete_entry_cb)
         self.connect(self.algoConfigButton, SIGNAL("clicked()"), self.configure_algo_cb)
         self.connect(self.applyAlgoButton, SIGNAL("clicked()"), self.apply_pipeline_cb)
@@ -228,10 +234,10 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         """
         self._update_filter_table()
         if self.selected_filter_name and self.selected_pipeline_object:
-            if self.selected_filter_name == "MinMaxFilter":
+            if self.selected_filter_name == "MinMaxScaler":
                 new_filter = self.minMaxFilter
-            if self.selected_filter_name == "MeanFilter":
-                pass
+            if self.selected_filter_name == "StandardScaler":
+                new_filter = self.scalerFilter
             self.selected_filter_object = new_filter
 
             self.selected_pipeline_object.add_filter(new_filter)
@@ -302,13 +308,18 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         :return:
         """
         # Create Dialog
-        if self.selected_filter_name == "MinMaxFilter":
+        self.selected_filter_name = self.chooseFilterComboBox.currentText()
+        if self.selected_filter_name == "MinMaxScaler":
+            print("MinMaxScaler Config")
             if self.minMaxScalerDialogController.exec_():
                 self.minMaxFilter = self.minMaxScalerDialogController.get_filter()
             if self.minMaxFilter:
                 self.selected_filter_object = self.minMaxFilter
-        if self.selected_filter_name == "MeanFilter":
-            pass
+        if self.selected_filter_name == "StandardScaler":
+            if self.scalerDialogController.exec_():
+                self.scalerFilter = self.scalerDialogController.get_filter()
+            if self.scalerFilter:
+                self.selected_filter_object = self.scalerFilter
 
     def apply_pipeline_cb(self):
         """
@@ -316,21 +327,22 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         :return:
         """
         # Create new pipeline
-        new_pipeline = MyPipeline(self.selected_algorithm_object)
-        self.pipelines.append(new_pipeline)
+        if self.selected_algorithm_object:      # Only add, if user configured algorithm
+            new_pipeline = MyPipeline(self.selected_algorithm_object)
+            self.pipelines.append(new_pipeline)
 
-        self.applied_algorithms.append(self.kNeighbor)
+            self.applied_algorithms.append(self.selected_algorithm_object)
 
-        self._update_algo_table()
+            self._update_algo_table()
 
-        if self.selected_pipeline_nr is None:
-            self.selected_pipeline_nr = 0
-            print("if self.selected_pipeline_nr is None")
-        else:
-            self.selected_pipeline_nr = len(self.pipelines) - 1
-        self.pipelinesTableWidget.selectRow(self.selected_pipeline_nr)
+            if self.selected_pipeline_nr is None:
+                self.selected_pipeline_nr = 0
+                print("if self.selected_pipeline_nr is None")
+            else:
+                self.selected_pipeline_nr = len(self.pipelines) - 1
+            self.pipelinesTableWidget.selectRow(self.selected_pipeline_nr)
 
-        self._update_pipeline_info()
+            self._update_pipeline_info()
 
     def action_online_analysis_cb(self):
         self.online_analysis_active = not self.online_analysis_active
@@ -372,7 +384,6 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         else:
             self.dbConnectionActiveLabel.setStyleSheet("QLabel { background-color : red}")
             print("No Database Connection possible")
-            # sys.exit(1)
 
         self.populate_table_view_cb()
 
@@ -419,36 +430,13 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         This function populates the tabeleView in the the Datenintegration Window with the database data.
         :return:
         """
-        # ###################################################################################################################
-        # Database Integration
-        # ###################################################################################################################
-        # self.selected_table_name = 'data' #self.tableSelectionComboBox.itemText(index)
-
-        # self.selected_workpiece = ...
-
-        # self.irisDataModel.setTable(self.selected_table_name)             # Load "iris" table from currently open database
-        #
-        # self.irisDataModel.select()
-
-        # # DEBUG: Uncomment databaseTableView
-        # self.databaseTableView.setModel(self.databaseModel)
-        # # self.connect(self.databaseTableView.selectionModel(), SIGNAL("selectionChanged(QItemSelection, QItemSelection)"), self.id_selection_cb)
-        #
-        # # # Set custom Delegate
-        # # self.databaseTableView.setItemDelegate()
-        # self.databaseTableView.setSelectionMode(QTableView.SingleSelection)
-        # self.databaseTableView.hideColumn(6)
-        # self.databaseTableView.setSelectionBehavior(QTableView.SelectRows)
-        # self.databaseTableView.resizeColumnsToContents()
-
-        self.setup_dialoges()
-
-        #####################################################################
-        #####################
         #############
         header_names = self.db.get_column_names()
         header_names = header_names[:-1]        # header_names[:-1] means don't regard last column > data
         entries = self.db.get_data()
+        if len(entries) > 149:
+            # Only display 149 elements to save memory
+            entries = entries[-149:]
         self.databaseTableWidget.setColumnCount(len(header_names))
         self.databaseTableWidget.setRowCount(len(entries))
         self.databaseTableWidget.verticalHeader().setVisible(True)
@@ -464,39 +452,6 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
                 item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 self.databaseTableWidget.setItem(row_nr, col_nr, item)
                 self.databaseTableWidget.resizeColumnsToContents()
-
-        #
-        # print("col_names = {}".format(header_names))
-        # item = QTableWidgetItem()
-        # for header in header_names:
-        #     item.setText(header)
-        #     # self.databaseTableWidget.setHorizontalHeaderLabels(QStringList('Pipeline'))
-
-            # item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-        # self.databaseTableWidget.setItem(index, 0, item)
-        # self.databaseTableWidget.resizeColumnsToContents()
-        # self.databaseTableWidget.setHorizontalHeaderLabels(QStringList('Pipeline'))
-        # self.databaseTableWidget.horizontalHeader().setStretchLastSection(True)
-
-    def add_entry_cb(self):
-        """
-        This Function is a callback to addButton.
-        It adds an Entry to the database
-        :return:
-        """
-        pass
-        # row = self.databaseTableView.currentIndex().row() \
-        #     if self.databaseTableView.currentIndex().isValid() else 0
-        #
-        # QSqlDatabase.database().transaction()
-        # self.irisDataModel.insertRow(row)
-        # index = self.irisDataModel.index(row, 0)
-        # self.databaseTableView.setCurrentIndex(index)
-        #
-        # query = QSqlQuery()
-        # query.exec_("SELECT MAX(id) FROM {}".format(self.selected_table_name))
-        # QSqlDatabase.database().commit()
-        # self.databaseTableView.edit(index)
 
     def delete_entry_cb(self):
         """
@@ -521,21 +476,15 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         if self.selected_algorithm_name == 'KNeighborsClassifier':
 
             if self.kNeighborClassifierDialogController.exec_():
-                self.kNeighbor = self.kNeighborClassifierDialogController.get_algorithm()
-            if self.kNeighbor:
-                # for row in range(0, self.num_rows):
-                # self.simpleKMeans.set_attributes(X)
-                # self.simpleKMeans.set_class(Y)
-                # self.simpleKMeans.train_model()
-                # TODO: Execute Algorithm
+                self.kNeighborAlgorithm = self.kNeighborClassifierDialogController.get_algorithm()
+            if self.kNeighborAlgorithm:
+                self.selected_algorithm_object = self.kNeighborAlgorithm
 
-                self.selected_algorithm_object = self.kNeighbor
-
-        elif self.selected_algorithm_name == 'FilteredClusterer':
-            pass
-
-        elif self.selected_algorithm_name == 'Cobweb':
-            pass
+        elif self.selected_algorithm_name == 'SVM':
+            if self.SVMClassifierDialogController.exec_():
+                self.SVMAlgorithm = self.SVMClassifierDialogController.get_algorithm()
+            if self.SVMAlgorithm:
+                self.selected_algorithm_object = self.SVMAlgorithm
 
     def action_help_about_cb(self):
         QMessageBox.about(self, "Ueber Data Analyzer",
@@ -543,6 +492,7 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
                           <p>Copyright &copy; 2017 IAS Universitaet Stuttgart
                           <p>Diese Software soll die Umsetzung eines automatisierten
                           Daten Analyse Prozesses zur industriellen Qualitaetssicherung exemplarisch darstellen.
+                          <p style="color:#0000FF";>Support: hessat@yahoo.de
                           <p>Python %s - Qt %s - PyQt %s on %s""" % (
                               __version__, platform.python_version(),
                               QT_VERSION_STR, PYQT_VERSION_STR, platform.system()))
@@ -603,15 +553,6 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         :return:
         """
         self.selected_algorithm_name = self.chooseAlgoComboBox.itemText(index)
-
-    def setup_dialoges(self):
-        """
-        Function is executed after a database connection is established.
-        Function populates Dialoges with data depending on the database connection
-        :return:
-        """
-        pass
-
 
 def rest_thread(arg):
     rest_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'REST', 'mysite', 'manage.py')

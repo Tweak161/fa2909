@@ -10,3 +10,5 @@ if __name__ == '__main__':
     form = TestMainWindowController.MainWindowClass()
     form.show()
     app.exec_()
+
+

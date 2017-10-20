@@ -50,6 +50,7 @@ class MainWindowClass(QMainWindow, TestAppMainWindow.Ui_TestAppMainWindow):
         self.connect(self.deleteDatabasePushButton, SIGNAL("clicked()"), self.delete_database)
         self.connect(self.clearRestPushButton, SIGNAL("clicked()"), self.clear_rest)
         self.connect(self.plotPushButton, SIGNAL("clicked()"), self.plot_trainings_data)
+        self.connect(self.createTablePushButton, SIGNAL("clicked()"), self.create_table)
 
     def start_stop_logging(self):
         if self.logging_timer.isActive():
@@ -120,7 +121,8 @@ class MainWindowClass(QMainWindow, TestAppMainWindow.Ui_TestAppMainWindow):
 
             self.db.connect(database_name, user_name, host_name, password)
         if not self.db.is_connected():
-            string = ("Datenbankverbindung hergestellt: Host = {}, Database = {}".format(host_name, database_name))
+            string = ("Datenbankverbindung konnte nicht hergestellt werden"
+                      ": Host = {}, Database = {}".format(host_name, database_name))
             self.plainTextEdit.setPlainText(string)
             # sys.exit(1)
 
@@ -135,3 +137,15 @@ class MainWindowClass(QMainWindow, TestAppMainWindow.Ui_TestAppMainWindow):
         :return:
         """
         self.generator.plot_generated_data()
+
+    def create_table(self):
+        """
+        Creates a new database table with the required format
+        :return:
+        """
+        success = self.db.load_dump()
+        if success:
+            self.plainTextEdit.setPlainText("Neue Tabelle erfolgreich erstellt: data")
+        else:
+            self.plainTextEdit.setPlainText("Neue Tabelle konnte nicht erstellt werden."
+                                            " Vielleicht existiert sie bereits")

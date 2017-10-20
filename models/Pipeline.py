@@ -1,17 +1,11 @@
+# coding: utf8
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import cross_val_score
-from sklearn.model_selection import train_test_split
 import numpy as np
 import requests
-import random
 from math import sqrt
 import uuid
 from time import gmtime, strftime
-
-import Filter
-
 
 NUM_FEATURES = 5
 
@@ -22,10 +16,6 @@ class MyPipeline:
         self.algorithm = algorithm
         self.filter_list = []
         self.name = self.algorithm.get_name()
-        # self.pipeline = Pipeline([
-        #     ('filter', MinMaxScaler()),
-        #     ('algorithm', KNeighborsClassifier())
-        # ])
         self.pipeline = None
         self.auto_configuration = False
         self.cross_val_score = None
@@ -123,7 +113,6 @@ class MyPipeline:
         :param data: (list of dicts) Contains list of classified data entries
         :return:
         """
-        print("training model with {}".format(len(data_list)))
         num_samples = len(data_list)
         X = np.zeros((num_samples, NUM_FEATURES), dtype='float64')  # Attributes
         y = np.zeros(num_samples, dtype='float64')  # Class
@@ -158,36 +147,33 @@ class MyPipeline:
         # # Create train and test sets
         # X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=14)
 
-        if self.algorithm.auto_config_on():
-            ('print > algorithm.auto_config_on()')
-            # Determine parameter: n_neighbors
-            parameter_values = list(range(1, 50))  # Include 20
-            opt_parameter = parameter_values[0]
-            opt_parameter_score = 0
-            for n_neighbors in parameter_values:
-                score = np.mean(cross_val_score(self.pipeline, X, y, scoring='accuracy'))
-                if score > opt_parameter_score:
-                    opt_parameter = n_neighbors
-                    opt_parameter_score = score
-            n_neighbors = opt_parameter
-            print('n_neighbors = {}'.format(n_neighbors))
-        else:
-            parameters = self.algorithm.get_parameters()
-            n_neighbors = parameters["n_neighbors"]
-            metric = parameters["metric"]
-            algorithm = parameters["algorithm"]
+        # if self.algorithm.auto_config_on():
+        #     ('print > algorithm.auto_config_on()')
+        #     # Determine parameter: n_neighbors
+        #     parameter_values = list(range(1, 50))  # Include 20
+        #     opt_parameter = parameter_values[0]
+        #     opt_parameter_score = 0
+        #     for n_neighbors in parameter_values:
+        #         score = np.mean(cross_val_score(self.pipeline, X, y, scoring='accuracy'))
+        #         if score > opt_parameter_score:
+        #             opt_parameter = n_neighbors
+        #             opt_parameter_score = score
+        #     n_neighbors = opt_parameter
+        #     print('n_neighbors = {}'.format(n_neighbors))
+        # else:
+        #     parameters = self.algorithm.get_parameters()
+        #     n_neighbors = parameters["n_neighbors"]
+        #     metric = parameters["metric"]
+        #     algorithm = parameters["algorithm"]
 
         self.cross_val_score = cross_val_score(self.pipeline, X, y, scoring='accuracy')
         self.pipeline.fit(X, y)
         self.accuracy = self.cross_val_score[0] * 100
 
-        # self.accuracy = random.uniform(92, 96)
-
         result_string = "TODO: Result String"
 
     def get_configuration_info(self):
         pass
-        print("get_configuration_info")
         info = "######################################################################\n"
         info += "Algorithmus \n"
         info += "######################################################################\n"
@@ -243,15 +229,19 @@ class MyPipeline:
         Saves Classification results to REST
         :return: void
         """
-        url = 'http://localhost:8000/result/'
-        data = {'Time': strftime("%Y-%m-%d %H:%M:%S", gmtime()),
-                'PartId': self.data["PartId"],
-                'Algorithm': "KNeighborsClassifier",
-                "Pipeline": self.pipeline_id,
-                "Filter": "MinMax",
-                "Rmse": self.accuracy,
-                "Prediction": self.data["Prediction"]}
-        response = requests.post(url, json=data)
+        try:
+            url = 'http://localhost:8000/result/'
+            data = {'Time': strftime("%Y-%m-%d %H:%M:%S", gmtime()),
+                    'PartId': self.data["PartId"],
+                    'Algorithm': "KNeighborsClassifier",
+                    "Pipeline": self.pipeline_id,
+                    "Filter": "MinMax",
+                    "Rmse": self.accuracy,
+                    "Prediction": self.data["Prediction"]}
+            response = requests.post(url, json=data)
+        except:
+            pass
+            # No Connection to REST
 
     def get_from_rest(self):
         """
@@ -314,7 +304,7 @@ class MyPipeline:
         result = ""
         for sample in self.results:
             if sample["Prediction"] == 3:
-                result += "Ueberpruefe Qualitaet von Werkstueck {}".format(sample["PartId"])
+                result += "Ueberpruefe Qualitaet von Werkstueck {} \n".format(sample["PartId"])
                 no_action_flag = 0
 
         if no_action_flag == 1:

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>964</width>
+    <width>1022</width>
     <height>626</height>
    </rect>
   </property>
@@ -25,7 +25,7 @@
        <enum>Qt::DefaultContextMenu</enum>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="dataintegrationTab">
        <attribute name="title">
@@ -1026,25 +1026,6 @@
             <item>
              <layout class="QVBoxLayout" name="verticalLayout">
               <item>
-               <widget class="QPushButton" name="addEntryButton">
-                <property name="minimumSize">
-                 <size>
-                  <width>160</width>
-                  <height>0</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>160</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="text">
-                 <string>&amp;Hinzufügen</string>
-                </property>
-               </widget>
-              </item>
-              <item>
                <widget class="QPushButton" name="deleteEntryButton">
                 <property name="minimumSize">
                  <size>
@@ -1100,6 +1081,19 @@
                  <string>Tabelle Löschen</string>
                 </property>
                </widget>
+              </item>
+              <item>
+               <spacer name="verticalSpacer_2">
+                <property name="orientation">
+                 <enum>Qt::Vertical</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>20</width>
+                  <height>40</height>
+                 </size>
+                </property>
+               </spacer>
               </item>
               <item>
                <widget class="QPushButton" name="refreshTableButton">
@@ -1177,7 +1171,7 @@
                   </item>
                   <item>
                    <property name="text">
-                    <string>SimpleKMeans</string>
+                    <string>SVM</string>
                    </property>
                   </item>
                  </widget>
@@ -1305,17 +1299,12 @@
                     </property>
                     <item>
                      <property name="text">
-                      <string>None</string>
+                      <string>MinMaxScaler</string>
                      </property>
                     </item>
                     <item>
                      <property name="text">
-                      <string>MinMaxFilter</string>
-                     </property>
-                    </item>
-                    <item>
-                     <property name="text">
-                      <string>MeanFilter</string>
+                      <string>StandardScaler</string>
                      </property>
                     </item>
                    </widget>
@@ -1492,7 +1481,7 @@
                 <item row="0" column="0">
                  <widget class="QLabel" name="label_4">
                   <property name="text">
-                   <string>Genauigkeit [%]</string>
+                   <string>Modell Genauigkeit [%]</string>
                   </property>
                  </widget>
                 </item>
@@ -1997,7 +1986,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>964</width>
+     <width>1022</width>
      <height>25</height>
     </rect>
    </property>

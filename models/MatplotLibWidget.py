@@ -2,7 +2,6 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as Canvas
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d import Axes3D
 from PyQt4 import QtGui, QtCore
-import random
 
 
 class MplCanvas(Canvas):
@@ -78,7 +77,8 @@ class DynamicMplCanvas(MplCanvas):
             if sample["Prediction"] == 3:
                 prediction.append('b')
 
-        self.sca.set_visible(False)
+        # self.sca.set_visible(False)
+        self.axes.clear()
         self.sca = self.axes.scatter(f1, f2, f3, c=prediction)
         self.draw()
 

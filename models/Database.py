@@ -1,6 +1,3 @@
-from PyQt4.QtSql import *
-import psycopg2
-import ast
 import psycopg2 as p
 
 
@@ -110,12 +107,12 @@ class DatabaseConnection(object):
         # Transform list of tuples of dicts into list of dicts
         data = []
         for record in self.cursor:
-            id = record[0]  # id (uuid)
-            time = record[1]  # time
+            # id = record[0]  # id (uuid)
+            # time = record[1]  # time
             part_id = record[2]  # part_id
-            component_id = record[3]  # component_id
-            processed = record[4]  # processed
-            classified = record[5]  # classified
+            # component_id = record[3]  # component_id
+            # processed = record[4]  # processed
+            # classified = record[5]  # classified
             data_record = record[6]  # data
 
             data_json = data_record

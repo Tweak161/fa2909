@@ -1,5 +1,5 @@
 import psycopg2 as p
-import psycopg2.extras as e     # Neede to access values via column name
+import psycopg2.extras as e     # Needed to access values via column name
 import json
 from threading import Thread
 from threading import Event
@@ -105,22 +105,6 @@ class DatabaseConnection(object):
                                                                        component_id,
                                                                        data_json)
         return string
-
-    # def start_logging_simulation(self, period):
-    #     """
-    #     Function writes data periodicall to postgresql database. Simulates logging
-    #     :param period: (int) Period in s
-    #     :return:
-    #     """
-    #     self.simulation_thread.set_timeout(period)
-    #     if self.simulation_thread.is_started():
-    #         self.stop_flag.clear()
-    #         print('clear stop flag')
-    #     else:
-    #         self.simulation_thread.start()  # Frequency: 50 Hz
-
-    # def stop_logging_simulation(self):
-    #     self.stop_flag.set()
 
     def get_highest_id(self):
         pass
@@ -350,8 +334,29 @@ class DatabaseConnection(object):
         """
         self.connection.commit()
 
+    def load_dump(self):
+        """
+        Function loads a sql dump into database
+        :return:
+        """
+        # Create uuid extension
+        command = "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+        try:
+            self.cursor.execute(command)
+        except:
+            # uuid extension already exists
+            pass
+            print("uuid extension couldn't be created")
 
-
+        path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'SQL', 'fa2909.sql')
+        try:
+            self.cursor.execute(open(path, "r").read())
+            print('table was created successfully')
+            return True
+        except:
+            # error
+            print("table couldn't be created")
+            return False
 
 
 
