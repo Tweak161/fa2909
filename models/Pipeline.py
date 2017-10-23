@@ -158,7 +158,7 @@ class MyPipeline:
             self.accuracy = self.cross_val_score[0] * 100
         except:
             pass
-            # To few training data. At least 3 samples are required for each class
+            # To few training data. At least 3 samples are required for each class.
 
         result_string = "TODO: Result String"
 
