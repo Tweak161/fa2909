@@ -262,9 +262,9 @@ class Generator(object):
         rmse_distribution_std = np.std(rmse_distribution)
         rmse_distribution_mean = np.mean(rmse_distribution)
 
-        if (rmse_distribution_mean + 0.75 * rmse_distribution_std) < abs(rmse):
+        if (rmse_distribution_mean + 0.5 * rmse_distribution_std) < abs(rmse):
             classification = 4  # Bad Quality > quality class 3
-        elif (rmse_distribution_mean + 0.5 * rmse_distribution_std) < abs(rmse):
+        elif (rmse_distribution_mean + 0.25 * rmse_distribution_std) < abs(rmse):
             classification = 2  # Mediocre Quality > quality class 2
         else:
             classification = 1  # Good Quality > quality class 1

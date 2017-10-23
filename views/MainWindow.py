@@ -826,7 +826,7 @@ class Ui_MainWindow(object):
         self.deleteTableButton.setText(_translate("MainWindow", "Tabelle Löschen", None))
         self.refreshTableButton.setText(_translate("MainWindow", "&Aktualisieren", None))
         self.label_5.setText(_translate("MainWindow", "Datenbank Verbindung", None))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.dataintegrationTab), _translate("MainWindow", "Datenintegration", None))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.dataintegrationTab), _translate("MainWindow", "Integration", None))
         self.label_18.setText(_translate("MainWindow", "Neue Pipeline", None))
         self.label_16.setText(_translate("MainWindow", "&Algorithmus", None))
         self.chooseAlgoComboBox.setItemText(0, _translate("MainWindow", "KNeighborsClassifier", None))

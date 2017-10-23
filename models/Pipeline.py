@@ -36,6 +36,15 @@ class MyPipeline:
     def get_filter_list(self):
         return self.filter_list
 
+    def delete_filter(self, index):
+        """
+        Function deletes Filter with given Index
+        :param index:
+        :return:
+        """
+        if index > -1:
+            del self.filter_list[index]
+
     def add_filter(self, filter):
         """
         Function adds filter to pipeline's internal list of filters
@@ -143,32 +152,13 @@ class MyPipeline:
         X[:, 2] = feature3_list
 
         y = class_list
-
-        # # Create train and test sets
-        # X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=14)
-
-        # if self.algorithm.auto_config_on():
-        #     ('print > algorithm.auto_config_on()')
-        #     # Determine parameter: n_neighbors
-        #     parameter_values = list(range(1, 50))  # Include 20
-        #     opt_parameter = parameter_values[0]
-        #     opt_parameter_score = 0
-        #     for n_neighbors in parameter_values:
-        #         score = np.mean(cross_val_score(self.pipeline, X, y, scoring='accuracy'))
-        #         if score > opt_parameter_score:
-        #             opt_parameter = n_neighbors
-        #             opt_parameter_score = score
-        #     n_neighbors = opt_parameter
-        #     print('n_neighbors = {}'.format(n_neighbors))
-        # else:
-        #     parameters = self.algorithm.get_parameters()
-        #     n_neighbors = parameters["n_neighbors"]
-        #     metric = parameters["metric"]
-        #     algorithm = parameters["algorithm"]
-
-        self.cross_val_score = cross_val_score(self.pipeline, X, y, scoring='accuracy')
-        self.pipeline.fit(X, y)
-        self.accuracy = self.cross_val_score[0] * 100
+        try:
+            self.cross_val_score = cross_val_score(self.pipeline, X, y, scoring='accuracy')
+            self.pipeline.fit(X, y)
+            self.accuracy = self.cross_val_score[0] * 100
+        except:
+            pass
+            # To few training data. At least 3 samples are required for each class
 
         result_string = "TODO: Result String"
 

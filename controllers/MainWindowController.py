@@ -26,6 +26,7 @@ from models.Database import DatabaseConnection
 
 __version__ = "1.0"
 
+
 class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
 
     def __init__(self):
@@ -43,8 +44,9 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         self.selected_algorithm_object = None
         self.pipelines = []
         self.selected_pipeline_nr = None
-        self.selected_pipeline_object = None
         self.selected_algorithm_name = None
+        self.selected_pipeline_object = None
+        self.selected_filter_nr = None
         self.selected_filter_name = None
         self.selected_filter_object = None
         self.selected_id = None
@@ -58,11 +60,11 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         # #############################################################################################################
         self.process_data_timer = QTimer(self)
         self.process_data_timer.timeout.connect(self.process_data_timer_cb)
-        self.process_data_timer.start(500)              # 500ms
+        self.process_data_timer.start(1500)              # 500ms
 
         self.update_gui_timer = QTimer(self)
         self.process_data_timer.timeout.connect(self.update_ui_timer_cb)
-        self.process_data_timer.start(500)
+        self.process_data_timer.start(1500)
 
         # #############################################################################################################
         # Initialize Plots
@@ -100,11 +102,12 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         self.connect(self.actionPrint, SIGNAL("triggered()"), self.action_print_cb)
 
         # QButton
+        self.connect(self.connectToDatabasePushButton, SIGNAL("clicked()"), self.action_open_new_database_cb)
         self.connect(self.deleteEntryButton, SIGNAL("clicked()"), self.delete_entry_cb)
+        self.connect(self.deleteFilterButton, SIGNAL("clicked()"), self.delete_filter_cb)
         self.connect(self.algoConfigButton, SIGNAL("clicked()"), self.configure_algo_cb)
         self.connect(self.applyAlgoButton, SIGNAL("clicked()"), self.apply_pipeline_cb)
         self.connect(self.configureFilterButton, SIGNAL("clicked()"), self.configure_filter_cb)
-        self.connect(self.connectToDatabasePushButton, SIGNAL("clicked()"), self.action_open_new_database_cb)
         self.connect(self.addFilterButton, SIGNAL("clicked()"), self.add_filter_cb)
         self.connect(self.deletePipelineButton, SIGNAL("clicked()"), self.delete_pipeline_cb)
         self.connect(self.startRestPushButton, SIGNAL("clicked()"), self.start_rest_cb)
@@ -248,12 +251,13 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
 
     def delete_pipeline_cb(self):
         # Get selected Row
-        selected_row = self.pipelinesTableWidget.currentRow()
-        if selected_row:
-            pass
-            selected_item = self.pipelinesTableWidget.currentItem()
-            self.pipelinesTableWidget.removeRow(selected_row)
-            del self.pipelines[selected_row]
+        # selected_row = self.pipelinesTableWidget.currentRow()
+        selected_row = self.pipelinesTableWidget.currentIndex().row()
+        print("selected_row = {}".format(selected_row))
+        if selected_row is not None and self.pipelines is not None:
+            if selected_row >= 0:
+                self.pipelinesTableWidget.removeRow(selected_row)
+                del self.pipelines[selected_row]
 
     def filter_selection_cb(self):
         """
@@ -264,6 +268,7 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         if not qmodel_index.isValid():
             return
         index = qmodel_index.row()
+        self.selected_filter_nr = index
 
     def database_selection_cb(self):
         """
@@ -280,7 +285,7 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
 
     def pipeline_selection_cb(self):
         """
-        Callback function is triggered, when user selects an entry in the "Angewandte Analyseverfahren" table
+        Callback function is triggered, when user selects an entry in the "Pipeline" table
         under the "Analyse" Tab.
         :return:
         """
@@ -325,7 +330,7 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         """
         This Callback function gets triggered when user clicks the "Hinzufuegen" Button in the "Analyse" Tab
         :return:
-        """
+        """       
         # Create new pipeline
         if self.selected_algorithm_object:      # Only add, if user configured algorithm
             new_pipeline = MyPipeline(self.selected_algorithm_object)
@@ -463,6 +468,18 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
         if self.selected_db_entry_uuid:
             self.db.delete_entry(self.selected_db_entry_uuid)
             self.populate_table_view_cb()
+
+    def delete_filter_cb(self):
+        """
+
+        :return:
+        """
+        selected_filter_nr = self.selected_filter_nr
+        if self.selected_pipeline_object is not None:
+            self.selected_pipeline_object.delete_filter(selected_filter_nr)
+            selected_row = self.pipelinesTableWidget.currentRow()
+            self.appliedFilterTableWidget.removeRow(selected_row)
+            self._update_pipeline_info()
 
     def configure_algo_cb(self):
         """
