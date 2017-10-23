@@ -72,7 +72,7 @@ class MyPipeline:
         self.data = data
         if online_analysis_active:
             self._calculate()
-            self.save_to_rest()
+            # self.save_to_rest()
         else:
             self._calculate()
         self.results.append(data)

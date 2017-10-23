@@ -573,7 +573,7 @@ class MainWindowClass(QMainWindow, MainWindow.Ui_MainWindow):
 
 def rest_thread(arg):
     rest_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'REST', 'mysite', 'manage.py')
-    run_rest_cmd = 'python ' + rest_path + ' runserver'
+    run_rest_cmd = sys.executable + ' ' + rest_path + ' runserver'
     os.system(run_rest_cmd)
     while True:
         pass
