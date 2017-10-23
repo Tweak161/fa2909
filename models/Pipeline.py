@@ -278,9 +278,9 @@ class MyPipeline:
             for sample in self.results:
                 if sample["Prediction"] == 3:
                     counter += 1
-            junk_percentage = (counter/len(self.data))*100
-
-            return str(junk_percentage)
+            junk_percentage = (float(counter)/float(len(self.results)))*100.0
+            junk_percentage_str = str(round(junk_percentage, 2))
+            return junk_percentage_str
         else:
             return "NA"
 
